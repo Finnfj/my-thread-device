@@ -1,0 +1,65 @@
+[package]
+edition      = "2024"
+name         = "my-thread-device"
+rust-version = "1.88"
+version      = "0.1.0"
+
+[[bin]]
+name = "my-thread-device"
+path = "./src/bin/main.rs"
+
+[dependencies]
+# ESP-HAL — log-04 instead of defmt
+esp-hal = { version = "~1.1.0", features = ["log-04", "esp32c6", "unstable"] }
+
+esp-rtos = { version = "0.3.0", features = [
+  "esp-radio",
+  "embassy",
+  "esp32c6",
+] }
+
+esp-bootloader-esp-idf  = { version = "0.5.0", features = ["log-04", "esp32c6"] }
+esp-alloc               = "0.10.0"
+esp-println             = { version = "0.17.0", features = ["log-04", "esp32c6"] }
+# IEEE 802.15.4 + BLE radio (Thread commissioning + operation)
+esp-radio               = { version = "0.18", features = ["ble", "log-04", "unstable"] }
+# Flash storage (needed transitively by the Matter stack)
+esp-storage             = "0.9"
+# Provides the memory_range! macro for reclaimed-RAM calculation
+esp-metadata-generated  = "0.4"
+
+# Embassy
+embassy-executor = "0.10.0"
+embassy-time     = "0.5.0"
+embassy-sync     = "0.8"
+embassy-futures  = "0.1"
+
+# Matter over Thread stack (git — not yet published to crates.io)
+rs-matter-embassy = { git = "https://github.com/sysgrok/rs-matter-embassy", features = [
+  "esp",
+  "log",
+  "mbedtls",
+  "openthread",
+  "openthread-heap-int-8192",
+] }
+# rs-matter direct dep for the `with!` macro and types
+rs-matter = "0.2"
+
+# C stdlib polyfill for OpenThread's pre-compiled library (str*, utoa, etc.)
+tinyrlibc = { version = "0.5", default-features = false, features = ["memchr", "utoa", "strtoul"] }
+
+log = "0.4"
+
+static_cell = "2.1.1"
+
+# For fine tuning these settings, please refer to https://doc.rust-lang.org/cargo/reference/profiles.html
+[profile.dev]
+# Always build with some optimisations — the default debug profile is too slow
+# for the radio/crypto workloads on a constrained device.
+opt-level = "s"
+
+[profile.release]
+codegen-units = 1     # LLVM can perform better optimisations using a single thread
+debug         = 2     # prefer slower builds but better debugging experience
+lto           = 'fat'
+opt-level     = 's'
