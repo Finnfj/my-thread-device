@@ -15,12 +15,13 @@ use esp_alloc::heap_allocator;
 use esp_backtrace as _;
 use esp_hal::clock::CpuClock;
 use esp_hal::gpio::Level;
+use esp_hal::ram;
 use esp_hal::rmt::{PulseCode, Rmt, TxChannelConfig, TxChannelCreator as _};
 use esp_hal::time::Rate;
 use esp_hal::timer::timg::TimerGroup;
 use esp_metadata_generated::memory_range;
 use log::info;
-use rs_matter::with;
+use rs_matter_embassy::matter::with;
 use tinyrlibc as _;
 
 use rs_matter_embassy::matter::crypto::{default_crypto, Crypto, RngCore};

@@ -20,11 +20,12 @@ esp-rtos = { version = "0.3.0", features = [
 
 esp-bootloader-esp-idf  = { version = "0.5.0", features = ["log-04", "esp32c6"] }
 esp-alloc               = "0.10.0"
+esp-backtrace           = { version = "0.19", features = ["panic-handler", "println", "esp32c6"] }
 esp-println             = { version = "0.17.0", features = ["log-04", "esp32c6"] }
 # IEEE 802.15.4 + BLE radio (Thread commissioning + operation)
-esp-radio               = { version = "0.18", features = ["ble", "log-04", "unstable"] }
+esp-radio               = { version = "0.18", features = ["ble", "log-04", "unstable", "esp32c6"] }
 # Flash storage (needed transitively by the Matter stack)
-esp-storage             = "0.9"
+esp-storage             = { version = "0.9", features = ["esp32c6"] }
 # Provides the memory_range! macro for reclaimed-RAM calculation
 esp-metadata-generated  = "0.4"
 
@@ -38,13 +39,9 @@ embassy-futures  = "0.1"
 rs-matter-embassy = { git = "https://github.com/sysgrok/rs-matter-embassy", features = [
   "esp",
   "log",
-  "mbedtls",
   "openthread",
   "openthread-heap-int-8192",
 ] }
-# rs-matter direct dep for the `with!` macro and types
-rs-matter = "0.2"
-
 # C stdlib polyfill for OpenThread's pre-compiled library (str*, utoa, etc.)
 tinyrlibc = { version = "0.5", default-features = false, features = ["memchr", "utoa", "strtoul"] }
 
@@ -53,6 +50,15 @@ log = "0.4"
 static_cell = "2.1.1"
 
 # For fine tuning these settings, please refer to https://doc.rust-lang.org/cargo/reference/profiles.html
+# Patch openthread + openthread-sys to git HEAD, which has the "internal MbedTLS"
+# fix (commit ad3d8f3). Without this patch, mbedtls-rs-sys tries to build
+# MbedTLS from source via cmake (which requires cmake to be installed).
+# The git HEAD instead uses the MbedTLS already compiled into the pre-built
+# openthread static library, so no cmake is needed.
+[patch.crates-io]
+openthread     = { git = "https://github.com/esp-rs/openthread" }
+openthread-sys = { git = "https://github.com/esp-rs/openthread" }
+
 [profile.dev]
 # Always build with some optimisations — the default debug profile is too slow
 # for the radio/crypto workloads on a constrained device.

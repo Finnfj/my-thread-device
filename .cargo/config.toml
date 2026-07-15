@@ -2,7 +2,11 @@
 runner = "espflash flash --monitor --chip esp32c6"
 
 [env]
-ESP_LOG = "info"
+ESP_LOG = "debug"
+# Force Ninja generator so CMake uses CMAKE_C_COMPILER=clang (set by openthread-sys)
+# instead of defaulting to the Visual Studio generator (which ignores CMAKE_C_COMPILER
+# and always invokes MSVC, breaking the cross-compile sysroot headers).
+CMAKE_GENERATOR = "Ninja"
 
 [build]
 rustflags = [
