@@ -1,0 +1,22 @@
+[package]
+name                   = "platform"
+description            = "Shared foundation for every Firmware: Matter stack set-up, and later Persisted State, Device Identity and Power Mode."
+edition.workspace      = true
+rust-version.workspace = true
+version.workspace      = true
+publish                = false
+
+[dependencies]
+esp-hal                = { workspace = true }
+esp-rtos               = { workspace = true }
+esp-alloc              = { workspace = true }
+esp-backtrace          = { workspace = true }
+esp-println            = { workspace = true }
+esp-radio              = { workspace = true }
+esp-storage            = { workspace = true }
+esp-metadata-generated = { workspace = true }
+embassy-futures        = { workspace = true }
+rs-matter-embassy      = { workspace = true }
+tinyrlibc              = { workspace = true }
+log                    = { workspace = true }
+static_cell            = { workspace = true }

@@ -2,7 +2,7 @@
 
 This repository builds self-built, personal smart-home **Devices** that speak Matter over Thread, in no_std Rust. The words used here are defined in [GLOSSARY.md](../GLOSSARY.md); the reasons behind each choice are in [docs/adr/](adr/).
 
-> **Status (2026-11):** this describes the target shape. The repo is still a single crate with one Firmware (the WS2812 On/Off Light), and Persisted State is not implemented yet (`DummyKvBlobStore`).
+> **Status (2026-11):** this describes the target shape. The workspace has the Platform crate and one Firmware (the WS2812 On/Off Light); `identity/` and `xtask/` do not exist yet, and Persisted State is not implemented yet (`DummyKvBlobStore`).
 
 ## Layers
 

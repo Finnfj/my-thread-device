@@ -103,7 +103,7 @@ subsequent builds reuse the cached static library.
 The firmware ELF is written to:
 
 ```
-target\riscv32imac-unknown-none-elf\debug\my-thread-device
+target\riscv32imac-unknown-none-elf\debug\on-off-light
 ```
 
 ---
@@ -113,7 +113,7 @@ target\riscv32imac-unknown-none-elf\debug\my-thread-device
 Connect the board over USB, then:
 
 ```powershell
-espflash flash target\riscv32imac-unknown-none-elf\debug\my-thread-device --baud 1500000
+espflash flash target\riscv32imac-unknown-none-elf\debug\on-off-light --baud 1500000
 ```
 
 Or use the Cargo runner shortcut (flashes **and** opens the monitor):
@@ -127,7 +127,7 @@ cargo run
 ## Monitoring the serial output
 
 ```powershell
-espflash monitor --elf target\riscv32imac-unknown-none-elf\debug\my-thread-device
+espflash monitor --elf target\riscv32imac-unknown-none-elf\debug\on-off-light
 ```
 
 On boot you will see something like:
@@ -165,14 +165,22 @@ Set `ESP_LOG=debug` in your environment for more verbose output.
 .
 ├── .cargo/
 │   └── config.toml        # Build target, runner, CMAKE_GENERATOR=Ninja
-├── src/
-│   ├── lib.rs             # no_std crate root
-│   └── bin/
-│       └── main.rs        # Firmware entry point
-├── build.rs               # Linker script wiring
-├── Cargo.toml             # Dependencies
+├── platform/              # Platform crate: chip + Matter-over-Thread stack bring-up
+│   └── src/lib.rs
+├── firmware/
+│   └── on-off-light/      # Firmware: On/Off Light on a WS2812B LED
+│       ├── build.rs       # Linker script wiring
+│       └── src/main.rs    # Device Type, LED driver, entry point
+├── docs/                  # architecture.md and ADRs
+├── Cargo.toml             # Workspace, shared dependencies and git pins
+├── GLOSSARY.md            # Domain vocabulary
 └── rust-toolchain.toml    # Pins stable Rust + riscv32imac target
 ```
+
+A Firmware describes its Device Types with rs-matter's own types and drives
+its hardware; the Platform owns everything Devices have in common (see
+[docs/architecture.md](docs/architecture.md)). `cargo build` / `cargo run` at
+the root build and flash the On/Off Light.
 
 ### Key crates
 

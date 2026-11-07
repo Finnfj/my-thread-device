@@ -15,6 +15,9 @@ rustflags = [
   "-C", "force-frame-pointers",
 ]
 
+# Every Firmware and the Platform build for the ESP32-C6 by default. Host-side
+# crates (tests of pure logic, xtask) opt out per invocation with
+# `--target host-tuple` (works on the pinned stable cargo).
 target = "riscv32imac-unknown-none-elf"
 
 [unstable]

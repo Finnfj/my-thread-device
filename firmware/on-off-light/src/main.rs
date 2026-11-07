@@ -1,73 +1,32 @@
+//! Firmware for a Matter On/Off Light: a WS2812B LED on GPIO8.
+//!
+//! This crate only describes the Device Type and drives the LED; bringing up
+//! the chip and the Matter-over-Thread stack is the Platform's job.
+
 #![no_std]
 #![no_main]
 #![recursion_limit = "256"]
 
-extern crate alloc;
-
-use core::pin::pin;
 use core::sync::atomic::{AtomicBool, Ordering};
 
 use embassy_executor::Spawner;
-use embassy_futures::select::{select, Either};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
-use esp_alloc::heap_allocator;
-use esp_backtrace as _;
-use esp_hal::clock::CpuClock;
 use esp_hal::gpio::Level;
-use esp_hal::ram;
 use esp_hal::rmt::{PulseCode, Rmt, TxChannelConfig, TxChannelCreator as _};
 use esp_hal::time::Rate;
-use esp_hal::timer::timg::TimerGroup;
-use esp_metadata_generated::memory_range;
-use log::info;
-use rs_matter_embassy::matter::with;
-use tinyrlibc as _;
-
-use rs_matter_embassy::matter::crypto::{default_crypto, Crypto, RngCore};
+use platform::{Platform, PlatformPeripherals};
 use rs_matter_embassy::matter::dm::clusters::app::on_off::{
     self, EffectVariantEnum, OnOffHooks, StartUpOnOffEnum,
 };
-use rs_matter_embassy::matter::dm::clusters::basic_info::BasicInfoConfig;
 use rs_matter_embassy::matter::dm::clusters::desc::{self as desc, ClusterHandler as _};
-use rs_matter_embassy::matter::dm::devices::test::{
-    DAC_PRIVKEY, TEST_DEV_ATT, TEST_DEV_COMM, TEST_DEV_DET,
-};
 use rs_matter_embassy::matter::dm::devices::DEV_TYPE_ON_OFF_LIGHT;
-use rs_matter_embassy::matter::dm::{
-    Async, Cluster, Dataver, EmptyHandler, Endpoint, EpClMatcher, Node,
-};
+use rs_matter_embassy::matter::dm::{Async, Cluster, EmptyHandler, Endpoint, EpClMatcher, Node};
 use rs_matter_embassy::matter::error::Error;
-use rs_matter_embassy::matter::persist::DummyKvBlobStore;
 use rs_matter_embassy::matter::tlv::Nullable;
-use rs_matter_embassy::matter::utils::init::InitMaybeUninit;
-use rs_matter_embassy::matter::{clusters, devices, BasicCommData};
-use rs_matter_embassy::stack::rand::reseeding_csprng;
-use rs_matter_embassy::wireless::esp::EspThreadDriver;
-use rs_matter_embassy::wireless::{EmbassyThread, EmbassyThreadMatterStack};
+use rs_matter_embassy::matter::{clusters, devices, with};
 
 esp_bootloader_esp_idf::esp_app_desc!();
-
-// ── Memory layout ────────────────────────────────────────────────────────────
-
-/// Bump allocator size for rs-matter-stack futures during `run*` methods.
-const BUMP_SIZE: usize = 25_000;
-
-/// Total heap size (100 KB).
-const HEAP_SIZE: usize = 102_400;
-
-/// Reclaimed DRAM2_UNINIT region handed to the second heap allocator.
-const RECLAIMED_RAM: usize =
-    memory_range!("DRAM2_UNINIT").end - memory_range!("DRAM2_UNINIT").start;
-
-/// Helper to place a value into a StaticCell — borrowed from the
-/// rs-matter-embassy examples.
-macro_rules! mk_static {
-    ($t:ty) => {{
-        static STATIC_CELL: static_cell::StaticCell<$t> = static_cell::StaticCell::new();
-        STATIC_CELL.uninit()
-    }};
-}
 
 // ── WS2812 On/Off hooks ──────────────────────────────────────────────────────
 
@@ -88,7 +47,6 @@ impl WS2812OnOffLogic {
             on_off: AtomicBool::new(false),
         }
     }
-
 }
 
 impl OnOffHooks for WS2812OnOffLogic {
@@ -179,7 +137,7 @@ const LIGHT_ENDPOINT_ID: u16 = 1;
 /// The Matter Light node metadata, describing endpoints and clusters.
 const NODE: Node = Node {
     endpoints: &[
-        EmbassyThreadMatterStack::<0, ()>::root_endpoint(),
+        platform::root_endpoint(),
         Endpoint::new(
             LIGHT_ENDPOINT_ID,
             devices!(DEV_TYPE_ON_OFF_LIGHT),
@@ -188,91 +146,35 @@ const NODE: Node = Node {
     ],
 };
 
-/// Device basic info — the SAI field is required by the Thread SRP registration.
-const TEST_BASIC_INFO: BasicInfoConfig = BasicInfoConfig {
-    sai: Some(500),
-    ..TEST_DEV_DET
-};
-
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 #[esp_rtos::main]
 async fn main(_s: Spawner) {
-    esp_println::logger::init_logger_from_env();
-    info!("Starting Matter Thread device...");
+    let peripherals = platform::init();
 
-    // Split heap: regular DRAM + reclaimed DRAM2_UNINIT region.
-    heap_allocator!(size: HEAP_SIZE - RECLAIMED_RAM);
-    heap_allocator!(#[ram(reclaimed)] size: RECLAIMED_RAM);
-
-    let peripherals = esp_hal::init(
-        esp_hal::Config::default().with_cpu_clock(CpuClock::max()),
-    );
-
-    // TRNG source — must be created before calling Trng::try_new().
-    let _trng_source = esp_hal::rng::TrngSource::new(peripherals.RNG, peripherals.ADC1);
-    let crypto = default_crypto(
-        reseeding_csprng(esp_hal::rng::Trng::try_new().unwrap(), 1000).unwrap(),
-        DAC_PRIVKEY,
-    );
-    let mut weak_rand = crypto.weak_rand().unwrap();
-
-    // Random discriminator avoids SRP collisions if the device restarts without
-    // being properly decommissioned first.
-    let discriminator = (weak_rand.next_u32() & 0xfff) as u16;
-
-    // Random IEEE EUI-64 for this Thread device instance.
-    let mut ieee_eui64 = [0u8; 8];
-    weak_rand.fill_bytes(&mut ieee_eui64);
-
-    // Start the Embassy runtime (timers + software interrupt).
-    let timg0 = TimerGroup::new(peripherals.TIMG0);
-    let sw_interrupt =
-        esp_hal::interrupt::software::SoftwareInterruptControl::new(peripherals.SW_INTERRUPT);
-    esp_rtos::start(timg0.timer0, sw_interrupt.software_interrupt0);
-
-    // Allocate the Matter stack statically — its footprint is ~35-50 KB and
-    // a stack allocation of that size would blow the program stack.
-    let stack = mk_static!(EmbassyThreadMatterStack::<BUMP_SIZE, ()>).init_with(
-        EmbassyThreadMatterStack::init(
-            &TEST_BASIC_INFO,
-            BasicCommData {
-                password: TEST_DEV_COMM.password,
-                discriminator,
-            },
-            &TEST_DEV_ATT,
-        ),
-    );
+    let mut platform = Platform::start(PlatformPeripherals {
+        rng: peripherals.RNG,
+        adc1: peripherals.ADC1,
+        timg0: peripherals.TIMG0,
+        sw_interrupt: peripherals.SW_INTERRUPT,
+        ieee802154: peripherals.IEEE802154,
+        bt: peripherals.BT,
+    });
 
     // Create the On/Off cluster handler backed by the global WS2812 hooks.
-    let on_off_handler = on_off::OnOffHandler::new_standalone(
-        Dataver::new_rand(&mut weak_rand),
-        LIGHT_ENDPOINT_ID,
-        &WS2812,
-    );
+    let on_off_handler =
+        on_off::OnOffHandler::new_standalone(platform.dataver(), LIGHT_ENDPOINT_ID, &WS2812);
 
     // Assemble the data model handler chain.
     let handler = EmptyHandler
         .chain(
-            EpClMatcher::new(
-                Some(LIGHT_ENDPOINT_ID),
-                Some(WS2812OnOffLogic::CLUSTER.id),
-            ),
+            EpClMatcher::new(Some(LIGHT_ENDPOINT_ID), Some(WS2812OnOffLogic::CLUSTER.id)),
             on_off::HandlerAsyncAdaptor(&on_off_handler),
         )
         .chain(
-            EpClMatcher::new(
-                Some(LIGHT_ENDPOINT_ID),
-                Some(desc::DescHandler::CLUSTER.id),
-            ),
-            Async(desc::DescHandler::new(Dataver::new_rand(&mut weak_rand)).adapt()),
+            EpClMatcher::new(Some(LIGHT_ENDPOINT_ID), Some(desc::DescHandler::CLUSTER.id)),
+            Async(desc::DescHandler::new(platform.dataver()).adapt()),
         );
-
-    // Dummy KV store — Matter state is not persisted across reboots.
-    // To add persistence, replace with SeqMapKvBlobStore backed by esp-storage.
-    let mut store = DummyKvBlobStore;
-    stack.startup(&crypto, &mut store).await.unwrap();
-    let kv = stack.matter().kv(store);
 
     // Initialise the WS2812 LED driver on GPIO8 using the RMT peripheral.
     // We configure the channel at 80 MHz with no clock divider (12.5 ns/tick).
@@ -288,8 +190,6 @@ async fn main(_s: Spawner) {
         .unwrap()
         .with_pin(peripherals.GPIO8);
 
-    info!("Booting Matter stack. Scan the QR code printed below to commission.");
-
     // LED driving future: waits on LED_SIGNAL and refreshes the WS2812 pixel.
     // Uses the blocking RMT API (transmission takes ~30 µs — negligible here).
     let led_driver = async move {
@@ -301,34 +201,5 @@ async fn main(_s: Spawner) {
         }
     };
 
-    // Run the Matter Thread stack and the LED driver concurrently.
-    //
-    // `stack.run()` drives:
-    //   - BLE for commissioning (non-concurrent: BLE stops when Thread starts)
-    //   - OpenThread networking
-    //   - Matter protocol (exchanges, subscriptions, etc.)
-    //
-    // `led_driver` drives the pixel, sleeping between LED_SIGNAL wakes.
-    //
-    // The LED future never returns; if Matter returns an error, we propagate it.
-    let matter = pin!(stack.run(
-        EmbassyThread::new(
-            EspThreadDriver::new(peripherals.IEEE802154, peripherals.BT),
-            crypto.rand().unwrap(),
-            ieee_eui64,
-            &kv,
-            stack,
-            true, // randomise BLE address
-        ),
-        &crypto,
-        (NODE, handler),
-        &kv,
-        (),
-    ));
-    let led_driver = pin!(led_driver);
-
-    match select(matter, led_driver).await {
-        Either::First(result) => result.unwrap(),
-        Either::Second(()) => unreachable!(),
-    }
+    platform.run(NODE, handler, led_driver).await.unwrap();
 }
