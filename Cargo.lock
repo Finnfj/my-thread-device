@@ -2291,29 +2291,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "my-thread-device"
-version = "0.1.0"
-dependencies = [
- "embassy-executor",
- "embassy-futures",
- "embassy-sync 0.8.0",
- "embassy-time",
- "esp-alloc",
- "esp-backtrace",
- "esp-bootloader-esp-idf",
- "esp-hal",
- "esp-metadata-generated",
- "esp-println",
- "esp-radio",
- "esp-rtos",
- "esp-storage",
- "log",
- "rs-matter-embassy",
- "static_cell",
- "tinyrlibc",
-]
-
-[[package]]
 name = "nb"
 version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2511,6 +2488,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "on-off-light"
+version = "0.1.0"
+dependencies = [
+ "embassy-executor",
+ "embassy-sync 0.8.0",
+ "esp-bootloader-esp-idf",
+ "esp-hal",
+ "esp-rtos",
+ "log",
+ "platform",
+ "rs-matter-embassy",
+]
+
+[[package]]
 name = "once_cell"
 version = "1.21.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2622,6 +2613,25 @@ checksum = "569a3fcf0e6334c6c46c1507f83a99ba30ae9cdc5761bdb2ca40f7eb55138bd4"
 dependencies = [
  "proc-macro2",
  "quote",
+]
+
+[[package]]
+name = "platform"
+version = "0.1.0"
+dependencies = [
+ "embassy-futures",
+ "esp-alloc",
+ "esp-backtrace",
+ "esp-hal",
+ "esp-metadata-generated",
+ "esp-println",
+ "esp-radio",
+ "esp-rtos",
+ "esp-storage",
+ "log",
+ "rs-matter-embassy",
+ "static_cell",
+ "tinyrlibc",
 ]
 
 [[package]]

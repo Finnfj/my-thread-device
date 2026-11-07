@@ -1,0 +1,23 @@
+[package]
+name                   = "on-off-light"
+description            = "Firmware for a Matter On/Off Light driving a WS2812B LED."
+edition.workspace      = true
+rust-version.workspace = true
+version.workspace      = true
+publish                = false
+
+[[bin]]
+name = "on-off-light"
+path = "src/main.rs"
+test = false
+bench = false
+
+[dependencies]
+platform               = { workspace = true }
+esp-hal                = { workspace = true }
+esp-rtos               = { workspace = true }
+esp-bootloader-esp-idf = { workspace = true }
+embassy-executor       = { workspace = true }
+embassy-sync           = { workspace = true }
+rs-matter-embassy      = { workspace = true }
+log                    = { workspace = true }
