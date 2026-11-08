@@ -1,4 +1,6 @@
 [toolchain]
-channel    = "stable-x86_64-pc-windows-msvc"
-components = ["rust-src"]
-targets = ["riscv32imac-unknown-none-elf"]
+# Plain `stable`, not `stable-<host>`: rustup picks the host itself, so the same
+# file works on the Windows dev machine and on Linux CI / Renovate runners.
+channel    = "stable"
+components = ["rust-src", "clippy"]
+targets    = ["riscv32imac-unknown-none-elf"]

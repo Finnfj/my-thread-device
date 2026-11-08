@@ -1,0 +1,36 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Policy: docs/adr/0012-renovate-for-routine-bumps-skill-for-the-lockstep-set.md",
+  "extends": ["config:recommended"],
+  "timezone": "Europe/Berlin",
+  "schedule": ["before 6am on monday"],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 6am on monday"]
+  },
+  "packageRules": [
+    {
+      "description": "Routine bumps: every non-major update in one weekly PR.",
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "routine dependencies"
+    },
+    {
+      "description": "A 0.x minor bump (0.4 -> 0.5) is breaking in Cargo, so it gets its own PR.",
+      "matchManagers": ["cargo"],
+      "matchCurrentVersion": "<1.0.0",
+      "matchUpdateTypes": ["minor"],
+      "groupName": null
+    },
+    {
+      "description": "Lockstep Set (see GLOSSARY.md): this list is the single source of truth. Only reported on the Dependency Dashboard; upgraded as a whole by /upgrade-lockstep-set. The [patch.crates-io] openthread crates belong to it too, but Renovate never reads patch tables.",
+      "matchDepNames": [
+        "esp-*",
+        "embassy-executor",
+        "embassy-sync",
+        "rs-matter-embassy"
+      ],
+      "groupName": "Lockstep Set",
+      "dependencyDashboardApproval": true
+    }
+  ]
+}
