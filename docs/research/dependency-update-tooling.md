@@ -232,7 +232,7 @@ Cargo semantics: a bare `0.18` means `^0.18` (`>=0.18.0, <0.19.0`), and `~1.1.0`
 
 ### Hosting and cost
 
-This repository is **private** with no license (`gh repo view`, 2026-11-08), which matters for the plan choice.
+This repository was **private** when this was researched and was made **public** later on 2026-11-08, still with no license (`gh repo view`). Being public makes Actions minutes free and removes the concern of a third party reading private code. Write access by the Mend app remains.
 
 - **Renovate.**
   - Mend Renovate Community Cloud is free "across an unlimited number of public and private repositories", installed as a GitHub App via developer.mend.io. Limits: 1 concurrent job per org, runs every 4 hours, 1 vCPU / 3 GB RAM / 15 GB disk, 30-min job timeout (https://docs.renovatebot.com/mend-hosted/overview/).
@@ -243,7 +243,7 @@ This repository is **private** with no license (`gh repo view`, 2026-11-08), whi
   - Built into GitHub (https://docs.renovatebot.com/bot-comparison/#built-in-to-github-vs-app) and configured with `.github/dependabot.yml`.
   - Cargo is supported for version updates, security updates, private repositories and private registries, but not vendoring (https://github.com/github/docs/blob/8cd1075179df75319912891d6620c9cb78eefb4d/data/reusables/dependabot/supported-package-managers.md, row "Cargo"; rendered at https://docs.github.com/en/code-security/dependabot/ecosystems-supported-by-dependabot/supported-ecosystems-and-repositories).
   - Standard GitHub-hosted runners are free for Dependabot (https://docs.github.com/en/billing/concepts/product-billing/github-actions).
-- **CI minutes for checking bot PRs.** This repo is private, so the CI workflow below draws from the account's included Actions compute usage, whichever bot is used (same billing page).
+- **CI minutes for checking bot PRs.** Standard GitHub-hosted runners are free for public repositories, so the CI workflow below costs nothing now that the repo is public (same billing page). While it was private, the runs drew from the account's included Actions minutes.
 
 ### Effect of `rust-toolchain.toml` = `stable-x86_64-pc-windows-msvc`
 
