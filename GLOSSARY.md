@@ -92,3 +92,9 @@ The 12-bit number that lets a controller tell apart Devices waiting for Commissi
 **Build Secret**:
 The private key, held outside the repository, from which every Device's Setup Passcode and Discriminator are derived.
 _Avoid_: Salt, seed, master key
+
+## Development
+
+**Lockstep Set**:
+The dependencies whose types are shared with `esp-hal`, `esp-radio`, `esp-rtos` or `rs-matter-embassy`, so that they can only be upgraded together, never one at a time.
+_Avoid_: esp family, pinned deps, the stack

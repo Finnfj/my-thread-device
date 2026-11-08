@@ -4,6 +4,7 @@ description            = "Firmware for a Matter On/Off Light driving a WS2812B L
 edition.workspace      = true
 rust-version.workspace = true
 version.workspace      = true
+license.workspace      = true
 publish                = false
 
 [[bin]]

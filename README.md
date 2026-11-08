@@ -41,7 +41,7 @@ device restarts you need to remove it from your controller and re-commission.
 
 ### Rust toolchain
 
-The project uses **stable Rust** (`rust-toolchain.toml` pins the exact channel).
+The project uses **stable Rust** (`rust-toolchain.toml` pins the `stable` channel).
 `rustup` picks it up automatically on first build; no manual steps are needed
 beyond having rustup installed.
 
@@ -208,3 +208,18 @@ the root build and flash the On/Off Light.
   amber when on). Adding the `ColorControl` cluster is a natural extension.
 - **Single reboot = decommission** — until persistence is added, every reboot
   requires removing and re-adding the device in your controller app.
+
+---
+
+## License
+
+Licensed under either of
+
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE))
+- MIT license ([LICENSE-MIT](LICENSE-MIT))
+
+at your option.
+
+Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in this work by you, as defined in the Apache-2.0 license, shall
+be dual licensed as above, without any additional terms or conditions.

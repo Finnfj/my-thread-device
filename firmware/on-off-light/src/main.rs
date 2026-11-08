@@ -37,12 +37,12 @@ static LED_SIGNAL: Signal<CriticalSectionRawMutex, bool> = Signal::new();
 ///
 /// - `on_off`: persists the current state across Matter interactions.
 /// - `set_on_off` signals `LED_SIGNAL` so the LED future can update the pixel.
-pub struct WS2812OnOffLogic {
+struct WS2812OnOffLogic {
     on_off: AtomicBool,
 }
 
 impl WS2812OnOffLogic {
-    pub const fn new() -> Self {
+    const fn new() -> Self {
         Self {
             on_off: AtomicBool::new(false),
         }

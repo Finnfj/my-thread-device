@@ -8,6 +8,7 @@ default-members = ["firmware/on-off-light"]
 edition      = "2024"
 rust-version = "1.88"
 version      = "0.1.0"
+license      = "MIT OR Apache-2.0"
 
 [workspace.dependencies]
 platform = { path = "platform" }
@@ -31,7 +32,8 @@ esp-println             = { version = "0.17.0", features = ["log-04", "esp32c6"]
 # trouble-host 0.7 — that bump landed in esp-hal's git repo but hasn't been
 # published to crates.io yet, so 1.0.0-beta.0 + current rs-matter-embassy
 # cannot both be satisfied. See the rs-matter-embassy pin below.
-esp-radio               = { version = "0.18", features = ["ble", "log-04", "unstable", "esp32c6"] }
+# Unpin when: an esp-radio release on crates.io depends on bt-hci ^0.9.
+esp-radio              = { version = "0.18", features = ["ble", "log-04", "unstable", "esp32c6"] }
 # Flash storage (needed transitively by the Matter stack)
 esp-storage             = { version = "0.9", features = ["esp32c6"] }
 # Provides the memory_range! macro for reclaimed-RAM calculation
@@ -48,7 +50,7 @@ embassy-futures  = "0.1"
 # but esp-radio 1.0.0-beta.0 (the latest published on crates.io) still
 # depends on bt-hci ^0.8 — that leaves two incompatible bt-hci versions in
 # the graph and a hard build error in rs-matter-embassy's BLE glue code.
-# Unpin once a matching esp-radio release (bt-hci 0.9+) ships.
+# Unpin when: the esp-radio pin above is lifted (esp-radio with bt-hci ^0.9).
 rs-matter-embassy = { git = "https://github.com/sysgrok/rs-matter-embassy", rev = "f31233a6fd4530ff25ad3bcbd9abf8fe854320aa", features = [
   "esp",
   "log",
@@ -72,6 +74,8 @@ static_cell = "2.1.1"
 # while the rs-matter-embassy commit we're pinned to above needs esp-radio
 # 0.18 (bt-hci 0.8-compatible) throughout the whole graph. See the
 # esp-radio and rs-matter-embassy comments above.
+# Unpin when: the rs-matter-embassy pin above is lifted (move rev to HEAD).
+# Drop the patch when: an openthread release on crates.io contains ad3d8f3.
 [patch.crates-io]
 openthread     = { git = "https://github.com/esp-rs/openthread", rev = "32ed1bc403ee49b429a377c9a65508af0e33e9f2" }
 openthread-sys = { git = "https://github.com/esp-rs/openthread", rev = "32ed1bc403ee49b429a377c9a65508af0e33e9f2" }
