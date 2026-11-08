@@ -14,30 +14,28 @@ license      = "MIT OR Apache-2.0"
 platform = { path = "platform" }
 
 # ESP-HAL — log-04 instead of defmt
-esp-hal = { version = "~1.1.0", features = ["log-04", "esp32c6", "unstable"] }
+esp-hal = { version = "~1.2.0", features = ["log-04", "esp32c6", "unstable"] }
 
-esp-rtos = { version = "0.3.0", features = [
+esp-rtos = { version = "0.4.0", features = [
   "esp-radio",
   "embassy",
   "esp32c6",
 ] }
 
-esp-bootloader-esp-idf  = { version = "0.5.0", features = ["log-04", "esp32c6"] }
-esp-alloc               = "0.10.0"
-esp-backtrace           = { version = "0.19", features = ["panic-handler", "println", "esp32c6"] }
-esp-println             = { version = "0.17.0", features = ["log-04", "esp32c6"] }
+esp-bootloader-esp-idf  = { version = "0.6.0", features = ["log-04", "esp32c6"] }
+esp-alloc               = "0.11.0"
+esp-backtrace           = { version = "0.20", features = ["panic-handler", "println", "esp32c6"] }
+esp-println             = { version = "0.18.0", features = ["log-04", "esp32c6"] }
 # IEEE 802.15.4 + BLE radio (Thread commissioning + operation)
-# Pinned to 0.18 (not the newer 1.0.0-beta.0): esp-radio 1.0.0-beta.0 still
-# depends on bt-hci ^0.8, while rs-matter-embassy HEAD requires bt-hci 0.9 /
-# trouble-host 0.7 — that bump landed in esp-hal's git repo but hasn't been
-# published to crates.io yet, so 1.0.0-beta.0 + current rs-matter-embassy
-# cannot both be satisfied. See the rs-matter-embassy pin below.
-# Unpin when: an esp-radio release on crates.io depends on bt-hci ^0.9.
-esp-radio              = { version = "0.18", features = ["ble", "log-04", "unstable", "esp32c6"] }
+# A pre-release on purpose (ADR-0012): 1.0.0-beta.1 is the first esp-radio on
+# crates.io whose BLE connector implements bt-hci-transport, the transport
+# trait that rs-matter-embassy's bt-hci 0.10 / trouble-host 0.8 accept.
+# 1.0.0-beta.2 is yanked.
+esp-radio              = { version = "1.0.0-beta.1", features = ["ble", "log-04", "unstable", "esp32c6"] }
 # Flash storage (needed transitively by the Matter stack)
-esp-storage             = { version = "0.9", features = ["esp32c6"] }
+esp-storage             = { version = "0.10", features = ["esp32c6"] }
 # Provides the memory_range! macro for reclaimed-RAM calculation
-esp-metadata-generated  = "0.4"
+esp-metadata-generated  = "0.5"
 
 # Embassy
 embassy-executor = "0.10.0"
@@ -45,13 +43,12 @@ embassy-sync     = "0.8"
 embassy-futures  = "0.1"
 
 # Matter over Thread stack (git — not yet published to crates.io)
-# Pinned: commits after this bump rs-matter-embassy's own esp-radio
-# requirement to 1.0.0-beta.0 together with bt-hci 0.9 / trouble-host 0.7,
-# but esp-radio 1.0.0-beta.0 (the latest published on crates.io) still
-# depends on bt-hci ^0.8 — that leaves two incompatible bt-hci versions in
-# the graph and a hard build error in rs-matter-embassy's BLE glue code.
-# Unpin when: the esp-radio pin above is lifted (esp-radio with bt-hci ^0.9).
-rs-matter-embassy = { git = "https://github.com/sysgrok/rs-matter-embassy", rev = "f31233a6fd4530ff25ad3bcbd9abf8fe854320aa", features = [
+# Pinned to "Update to esp-radio beta 1" (2a806b0): every later commit needs
+# unreleased rs-matter / rs-matter-stack from git, which would mean patching
+# those into the Lockstep Set too.
+# Unpin when: rs-matter-embassy HEAD builds against crates.io rs-matter,
+# i.e. its root Cargo.toml no longer patches rs-matter or rs-matter-stack.
+rs-matter-embassy = { git = "https://github.com/sysgrok/rs-matter-embassy", rev = "2a806b0b1b521293b34a773618499e87402c843c", features = [
   "esp",
   "log",
   "openthread",
@@ -64,21 +61,20 @@ log = "0.4"
 
 static_cell = "2.1.1"
 
-# Patch openthread + openthread-sys to git, which has the "internal MbedTLS"
-# fix (commit ad3d8f3). Without this patch, mbedtls-rs-sys tries to build
-# MbedTLS from source via cmake (which requires cmake to be installed).
-# The git HEAD instead uses the MbedTLS already compiled into the pre-built
-# openthread static library, so no cmake is needed.
-# Pinned to the last commit before openthread bumped its own esp-radio pin
-# to 1.0.0-beta.0 (commit fe59029): that beta still depends on bt-hci ^0.8,
-# while the rs-matter-embassy commit we're pinned to above needs esp-radio
-# 0.18 (bt-hci 0.8-compatible) throughout the whole graph. See the
-# esp-radio and rs-matter-embassy comments above.
+# Patch openthread + openthread-sys to git for commit 679dc18, the fix for a
+# refcount underflow in OpenThread::new_with_udp_srp, the constructor
+# rs-matter-embassy uses: without it, dropping the Thread stack (for example
+# for a Factory Reset) panics when overflow checks are on. crates.io
+# openthread 0.4.0 already has the internal-MbedTLS fix (ad3d8f3) this patch
+# was first added for, and accepts esp-radio 1.0.0-beta.1.
+# Pinned to ac97457, the last commit before CSL support (705c557) added a
+# RadioCaps argument to new_with_udp_srp: the rs-matter-embassy commit above
+# still calls the old signature, while its later commits call the new one.
 # Unpin when: the rs-matter-embassy pin above is lifted (move rev to HEAD).
-# Drop the patch when: an openthread release on crates.io contains ad3d8f3.
+# Drop the patch when: an openthread release on crates.io contains 679dc18.
 [patch.crates-io]
-openthread     = { git = "https://github.com/esp-rs/openthread", rev = "32ed1bc403ee49b429a377c9a65508af0e33e9f2" }
-openthread-sys = { git = "https://github.com/esp-rs/openthread", rev = "32ed1bc403ee49b429a377c9a65508af0e33e9f2" }
+openthread     = { git = "https://github.com/esp-rs/openthread", rev = "ac97457efc5debb4256bcd3013d4ddbe1ff804f4" }
+openthread-sys = { git = "https://github.com/esp-rs/openthread", rev = "ac97457efc5debb4256bcd3013d4ddbe1ff804f4" }
 
 # For fine tuning these settings, please refer to https://doc.rust-lang.org/cargo/reference/profiles.html
 [profile.dev]

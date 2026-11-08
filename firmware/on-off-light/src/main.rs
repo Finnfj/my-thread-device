@@ -21,7 +21,7 @@ use rs_matter_embassy::matter::dm::clusters::app::on_off::{
 };
 use rs_matter_embassy::matter::dm::clusters::desc::{self as desc, ClusterHandler as _};
 use rs_matter_embassy::matter::dm::devices::DEV_TYPE_ON_OFF_LIGHT;
-use rs_matter_embassy::matter::dm::{Async, Cluster, EmptyHandler, Endpoint, EpClMatcher, Node};
+use rs_matter_embassy::matter::dm::{Async, Cluster, EmptyHandler, Endpoint, Node};
 use rs_matter_embassy::matter::error::Error;
 use rs_matter_embassy::matter::tlv::Nullable;
 use rs_matter_embassy::matter::{clusters, devices, with};
@@ -156,7 +156,7 @@ async fn main(_s: Spawner) {
         rng: peripherals.RNG,
         adc1: peripherals.ADC1,
         timg0: peripherals.TIMG0,
-        sw_interrupt: peripherals.SW_INTERRUPT,
+        from_cpu_intr0: peripherals.FROM_CPU_INTR0,
         ieee802154: peripherals.IEEE802154,
         bt: peripherals.BT,
     });
@@ -165,14 +165,19 @@ async fn main(_s: Spawner) {
     let on_off_handler =
         on_off::OnOffHandler::new_standalone(platform.dataver(), LIGHT_ENDPOINT_ID, &WS2812);
 
-    // Assemble the data model handler chain.
+    // Assemble the handler chain for the light's endpoint (the Platform adds
+    // Endpoint 0).
     let handler = EmptyHandler
         .chain(
-            EpClMatcher::new(Some(LIGHT_ENDPOINT_ID), Some(WS2812OnOffLogic::CLUSTER.id)),
+            |endpoint, cluster| {
+                endpoint == LIGHT_ENDPOINT_ID && cluster == WS2812OnOffLogic::CLUSTER.id
+            },
             on_off::HandlerAsyncAdaptor(&on_off_handler),
         )
         .chain(
-            EpClMatcher::new(Some(LIGHT_ENDPOINT_ID), Some(desc::DescHandler::CLUSTER.id)),
+            |endpoint, cluster| {
+                endpoint == LIGHT_ENDPOINT_ID && cluster == desc::DescHandler::CLUSTER.id
+            },
             Async(desc::DescHandler::new(platform.dataver()).adapt()),
         );
 

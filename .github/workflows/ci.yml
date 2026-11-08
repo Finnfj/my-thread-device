@@ -49,11 +49,14 @@ jobs:
       # Lockstep Set crate in two versions builds fine until the types meet.
       # The graph has legitimate duplicates elsewhere (embassy-sync, heapless),
       # so only these crates must appear exactly once.
+      # BLE meets at bt-hci-transport, not bt-hci: esp-radio 1.0.0-beta.1 hands
+      # trouble-host a bt_hci_transport::Transport, and still pulls bt-hci 0.9
+      # for a legacy impl nothing here uses, next to trouble-host's bt-hci 0.10.
       - name: Lockstep Set duplicate guard
         run: |
           dups=$(cargo tree --workspace --locked --target "$TARGET" -e normal -d --depth 0 --prefix none \
                    | awk 'NF {print $1}' | sort | uniq -d \
-                   | grep -E '^(bt-hci|trouble-host|esp-[a-z0-9-]+|rs-matter[a-z0-9-]*|openthread(-sys)?|embassy-executor)$' || true)
+                   | grep -E '^(bt-hci-transport|trouble-host|esp-[a-z0-9-]+|rs-matter[a-z0-9-]*|openthread(-sys)?|embassy-executor)$' || true)
           if [ -n "$dups" ]; then
             echo "::error::Lockstep Set crates in more than one version: $(echo $dups)"
             for d in $dups; do cargo tree --workspace --locked --target "$TARGET" -e normal -i "$d"; done
