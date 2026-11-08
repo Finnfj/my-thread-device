@@ -1,0 +1,39 @@
+name: Renovate
+
+# Self-hosted Renovate (ADR-0012). The policy (schedule, groups, Lockstep Set)
+# lives in renovate.json; this workflow only runs the bot.
+#
+# Runs daily so Dependency Dashboard ticks are picked up within a day; renovate.json's
+# schedule still limits new PRs to Monday morning (Europe/Berlin).
+#
+# Needs the secret RENOVATE_TOKEN: a fine-grained personal access token for this
+# repo only, with read and write on Contents, Issues, Pull requests, Commit statuses
+# and Workflows, and read-only on Dependabot alerts
+# (https://docs.renovatebot.com/modules/platform/github/). The built-in GITHUB_TOKEN
+# won't do: PRs opened with it don't trigger the CI workflow.
+
+on:
+  schedule:
+    - cron: "0 3 * * *" # 04:00/05:00 Berlin, inside the "before 6am on monday" window
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: renovate
+  cancel-in-progress: false
+
+jobs:
+  renovate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: renovatebot/github-action@1c0cf989c02653fba0efe7ca5772338860ca71dc # v46.3.12
+        with:
+          token: ${{ secrets.RENOVATE_TOKEN }}
+        env:
+          RENOVATE_REPOSITORIES: ${{ github.repository }}
+          # renovate.json is already in the repo, so skip the onboarding PR.
+          RENOVATE_ONBOARDING: "false"
+          RENOVATE_REQUIRE_CONFIG: "required"
+          LOG_LEVEL: info

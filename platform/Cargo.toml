@@ -4,6 +4,7 @@ description            = "Shared foundation for every Firmware: Matter stack set
 edition.workspace      = true
 rust-version.workspace = true
 version.workspace      = true
+license.workspace      = true
 publish                = false
 
 [dependencies]
