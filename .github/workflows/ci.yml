@@ -51,4 +51,4 @@ jobs:
       # The crates whose types cross between Lockstep Set crates must appear
       # exactly once; the script explains why and holds the list.
       - name: Lockstep Set duplicate guard
-        run: scripts/lockstep-guard.sh
+        run: bash scripts/lockstep-guard.sh
