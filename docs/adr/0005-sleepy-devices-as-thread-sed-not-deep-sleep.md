@@ -1,8 +1,22 @@
 # Sleepy Devices are Thread sleepy end devices, not deep-sleep reboots
 
-A Sleepy Device stays attached to its Thread parent and turns its radio off between polls (Thread SED/SSED, announced as a Matter ICD), keeping RAM and Matter sessions. We rejected ESP32 deep sleep, where every wake is effectively a reboot: each wake would need a full Thread re-attach and a new Matter session, and without ICD support controllers would show the Device as offline between wakes.
+A Sleepy Device stays attached to its Thread parent and turns its radio off between polls (a Thread SED, announced as a Matter ICD). By default it keeps RAM and Matter sessions and light-sleeps between polls. We rejected ESP32 deep sleep as a reboot from scratch: each wake would need a full Thread attach and a new Matter session, and without ICD support controllers would show the Device as offline between wakes.
+
+An event-driven sensor, such as a reed contact or a PIR, that runs as a long-idle-time (LIT) ICD may deep sleep between check-ins instead, as long as each wake resumes rather than starts over. OpenThread's settings (parent info, frame counters) are persisted, so it rejoins its parent with one Child Update Request within the child timeout. CASE resumption and persistent subscriptions let controllers carry on without setting up new sessions. To its parent and its controllers it is still a Sleepy Device.
+
+Thread SSED (CSL) is not an option on the ESP32-C6: the pinned openthread is built without a CSL receiver, and the ESP radio has no timed receive.
+
+Amended on 2026-11-14 after [the battery sensor research](../research/battery-sensor-esphome-vs-no-std.md), checked against master @ 8c92940.
 
 ## Consequences
 
-- As of 2026-11 this is blocked upstream at every layer: rs-matter has no ICD Management cluster or check-in protocol, rs-matter-embassy doesn't expose link mode or poll period, OpenThread/esp-radio radio sleep is a TODO, and esp-rtos has no automatic light sleep. Sleepy Devices are a goal, not a feature, until that work is done here or upstream.
+- What blocks Sleepy Devices now is ESP 802.15.4 radio sleep. esp-radio has no way to turn the receiver off (esp-hal PR #6429 is open), and openthread's `EspRadio::set_sleep` is a TODO, so a SED keeps its receiver on at about 74 mA. The other pieces exist at the pinned versions but are not wired up:
+  - rs-matter 0.4.1 has the ICD Management cluster and Check-In. The active/idle control loop is only on git, after 0.4.1.
+  - esp-rtos 0.4.0 has experimental automatic light sleep.
+  - The openthread binding has link mode and poll period, but rs-matter-embassy @ 2a806b0 neither uses nor exposes them.
+
+  Sleepy Devices are a goal, not a feature, until radio sleep exists here or upstream.
 - Persistence does not depend on this and goes first.
+- The deep-sleep variant needs OpenThread's settings persisted, which ADR-0006 currently leaves in RAM, so ADR-0006 must be revisited before building one. It also needs rs-matter's `case-resumption` and `persistent-subscriptions` features turned on.
+- Only GPIO0–7 can wake the ESP32-C6 from deep sleep, and only on a level, not an edge. A deep-sleeping sensor's wake pin must be one of those and be re-armed to the opposite level before each sleep. The BOOT button (GPIO9) cannot wake it.
+- ADR-0010 keeps the commissioning window open until the Device is commissioned, which means advertising over BLE indefinitely on battery. Sleepy Devices need a bounded window or a button trigger. That is not decided yet.

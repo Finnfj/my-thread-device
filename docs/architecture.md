@@ -56,7 +56,7 @@ Persisted State lives in a dedicated `matter-kv` data partition defined by the r
 
 ## Power
 
-Every Device is an Always-On Device today. Sleepy Devices (Thread sleepy end device / Matter ICD) are the target for battery Devices but are blocked upstream; ESP32 deep sleep with a reboot on every wake was rejected. ([ADR 0005](adr/0005-sleepy-devices-as-thread-sed-not-deep-sleep.md))
+Every Device is an Always-On Device today. Sleepy Devices (Thread sleepy end device / Matter ICD) are the target for battery Devices but are blocked on ESP 802.15.4 radio sleep. ESP32 deep sleep with a reboot from scratch on every wake was rejected. An event-driven sensor may deep sleep between check-ins once each wake resumes its Thread and Matter state instead of starting over. ([ADR 0005](adr/0005-sleepy-devices-as-thread-sed-not-deep-sleep.md))
 
 ## Testing
 
