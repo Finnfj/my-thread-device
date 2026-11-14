@@ -10,6 +10,7 @@
 //!     let p = platform::init();
 //!     let mut platform = Platform::start(PlatformPeripherals { /* radio, RNG, timers */ });
 //!     // ... set up the Firmware's own hardware from the remaining peripherals ...
+//!     // The Firmware's own endpoints only; the Platform serves Endpoint 0.
 //!     let handler = /* rs-matter handler chain, using platform.dataver() */;
 //!     platform.run(NODE, handler, hardware_future).await.unwrap();
 //! }
@@ -32,20 +33,20 @@ use embassy_futures::select::{Either, select};
 use esp_alloc::heap_allocator;
 use esp_backtrace as _;
 use esp_hal::clock::CpuClock;
-use esp_hal::interrupt::software::SoftwareInterruptControl;
-use esp_hal::peripherals::{ADC1, BT, IEEE802154, Peripherals, RNG, SW_INTERRUPT, TIMG0};
+use esp_hal::peripherals::{ADC1, BT, FROM_CPU_INTR0, IEEE802154, Peripherals, RNG, TIMG0};
 use esp_hal::ram;
 use esp_hal::rng::{Trng, TrngSource};
 use esp_hal::timer::timg::TimerGroup;
 use esp_metadata_generated::memory_range;
 use log::info;
 use rs_matter_embassy::matter::BasicCommData;
-use rs_matter_embassy::matter::crypto::{Crypto, RngCore, default_crypto};
+use rs_matter_embassy::matter::crypto::{Crypto, Rng, default_crypto};
 use rs_matter_embassy::matter::dm::clusters::basic_info::BasicInfoConfig;
 use rs_matter_embassy::matter::dm::devices::test::{
     DAC_PRIVKEY, TEST_DEV_ATT, TEST_DEV_COMM, TEST_DEV_DET,
 };
-use rs_matter_embassy::matter::dm::{DataModel, Dataver, Endpoint, Node};
+use rs_matter_embassy::matter::dm::endpoints::ROOT_ENDPOINT_ID;
+use rs_matter_embassy::matter::dm::{Async, AsyncHandler, ChainedHandler, Dataver, Endpoint, Node};
 use rs_matter_embassy::matter::error::Error;
 use rs_matter_embassy::matter::persist::DummyKvBlobStore;
 use rs_matter_embassy::matter::utils::init::InitMaybeUninit;
@@ -116,7 +117,7 @@ pub struct PlatformPeripherals {
     pub rng: RNG<'static>,
     pub adc1: ADC1<'static>,
     pub timg0: TIMG0<'static>,
-    pub sw_interrupt: SW_INTERRUPT<'static>,
+    pub from_cpu_intr0: FROM_CPU_INTR0<'static>,
     pub ieee802154: IEEE802154<'static>,
     pub bt: BT<'static>,
 }
@@ -147,10 +148,9 @@ impl Platform {
         let mut ieee_eui64 = [0u8; 8];
         trng.fill_bytes(&mut ieee_eui64);
 
-        // Start the Embassy runtime (timers + software interrupt).
+        // Start the Embassy runtime (timer + the scheduler's cross-CPU interrupt).
         let timg0 = TimerGroup::new(p.timg0);
-        let sw_interrupt = SoftwareInterruptControl::new(p.sw_interrupt);
-        esp_rtos::start(timg0.timer0, sw_interrupt.software_interrupt0);
+        esp_rtos::start(timg0.timer0, p.from_cpu_intr0);
 
         // Allocate the Matter stack statically — its footprint is ~35-50 KB and
         // a stack allocation of that size would blow the program stack.
@@ -182,11 +182,15 @@ impl Platform {
     /// Run the Device: the Matter stack serving `node` through `handler`,
     /// alongside the Firmware's own `hardware` future.
     ///
+    /// `handler` serves the Firmware's own endpoints. The Platform puts the
+    /// Endpoint 0 system clusters in front of it; the stack adds the Thread
+    /// network ones itself.
+    ///
     /// Returns only if the Matter stack fails. If `hardware` finishes, the
     /// Matter stack keeps running on its own.
     pub async fn run<H, F>(self, node: Node<'static>, handler: H, hardware: F) -> Result<(), Error>
     where
-        (Node<'static>, H): DataModel,
+        H: AsyncHandler,
         F: Future<Output = ()>,
     {
         let Self {
@@ -199,6 +203,14 @@ impl Platform {
         } = self;
 
         let crypto = default_crypto(reseeding_csprng(trng, 1000).unwrap(), DAC_PRIVKEY);
+
+        // The stack serves only the network-dependent Endpoint 0 clusters; the
+        // rest (Descriptor, Basic Information, ACL, ...) are ours to chain in.
+        let handler = ChainedHandler::new(
+            |endpoint, _| endpoint == ROOT_ENDPOINT_ID,
+            Async(Stack::root_handler(&(), crypto.weak_rand()?)),
+            handler,
+        );
 
         // Dummy KV store — Matter state is not persisted across reboots.
         let mut store = DummyKvBlobStore;
