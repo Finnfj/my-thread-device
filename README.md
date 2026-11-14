@@ -153,6 +153,12 @@ Set `ESP_LOG=debug` in your environment for more verbose output.
 5. Once commissioned, use the app to turn the light on and off. The WS2812B LED
    on GPIO8 will respond in real time.
 
+> **Home Assistant:** enable the **test-net DCL** option of the Matter Server
+> add-on first. Its production trust policy rejects the test attestation
+> outright, with no warning to accept: the phone commissions the device, then
+> the hand-over to Home Assistant fails with a bare "An error occurred". The
+> add-on log names the cause: "This device uses a test/development certificate".
+
 > **Requires a Thread Border Router** on your network. The controller app will
 > usually detect and configure it automatically if you already have a compatible
 > smart home hub.

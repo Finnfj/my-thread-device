@@ -88,7 +88,7 @@ Commit, push, and open the PR with the `pr` skill. The body carries:
 - the local clippy, guard and fmt results;
 - a checklist of on-device checks that is the user's, left unchecked, and never claimed as done:
   - [ ] Flash the Test Board; it boots to the commissioning QR code with no panic
-  - [ ] Commission over BLE
+  - [ ] Commission over BLE (Home Assistant needs its Matter Server's test-net DCL option, see README)
   - [ ] Toggle the light over Thread
   - [ ] one item for each silent change from step 4
 
