@@ -21,6 +21,12 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      # ADR claims about what a dependency can do carry a "(checked in ...)"
+      # marker; this fails when one no longer matches Cargo.lock. Needs no
+      # toolchain, so it runs first.
+      - name: ADR version guard
+        run: bash scripts/adr-version-guard.sh
+
       # Native tools for openthread-sys, in case it builds OpenThread from
       # source instead of using its prebuilt library.
       - name: Install native build dependencies

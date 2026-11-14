@@ -19,6 +19,7 @@ Tools used throughout:
 - `python -I .claude/skills/upgrade-lockstep-set/upstream_reqs.py git URL --manifest PATH OLD..HEAD` prints, for each commit, the seam dependencies plus the `[patch.crates-io]` entries active in upstream's root. It bare-clones into `--cache` (a temp folder by default) and prints the clone's path as `# clone:`. Later steps run `git -C <clone> ...` in that same clone.
 - `cargo tree --workspace --target riscv32imac-unknown-none-elf -e normal -i NAME@VERSION` shows who pulls a crate.
 - `bash scripts/lockstep-guard.sh` is the same duplicate guard CI runs.
+- `bash scripts/adr-version-guard.sh` lists every ADR claim marked `(checked in <crate> <version>)` that no longer matches `Cargo.lock`.
 
 ## 1. Survey
 
@@ -76,7 +77,9 @@ Green clippy doesn't prove the Device works. In the first run, rs-matter-stack s
 
 Port every behavioural change into `platform/` or `firmware/`, and note each one for the PR.
 
-Done when: every hunk of the example diff is either mirrored here or noted as not applying.
+Then run `bash scripts/adr-version-guard.sh`. For each claim it lists, check the claim in the new version's source. If it still holds, update the marker; if not, amend the ADR (and its line in `docs/architecture.md`). In the first run, ADR-0005's "rs-matter has no ICD Management cluster" went stale unnoticed.
+
+Done when: every hunk of the example diff is either mirrored here or noted as not applying, and the ADR version guard passes.
 
 ## 5. PR
 
