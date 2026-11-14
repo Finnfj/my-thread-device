@@ -138,7 +138,9 @@ I - QR Code URL: https://project-chip.github.io/connectedhomeip/qrcode.html?data
 I - Manual pairing code: 3497-989-5191
 ```
 
-Set `ESP_LOG=debug` in your environment for more verbose output.
+The log level is set by `ESP_LOG` in `.cargo/config.toml`: `debug`, except for
+the modules that would print the Thread network key or other Matter secrets.
+See the comment there before changing it, and rebuild after a change.
 
 ---
 

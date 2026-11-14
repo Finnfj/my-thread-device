@@ -2,7 +2,21 @@
 runner = "espflash flash --monitor --chip esp32c6"
 
 [env]
-ESP_LOG = "debug"
+# Log filter for esp-println's logger, read when esp-println is built (so a
+# change needs a rebuild, not just a reflash). Global level `debug`, with caps
+# on the targets that print Thread or Matter secrets at higher levels:
+#
+# - `rs_matter_embassy::ot=warn`: logs the full Active Operational Dataset,
+#   network key included, at INFO on every Thread connect.
+# - `rs_matter::im=info`: dumps every Interaction Model request at DEBUG,
+#   octet strings in full, so AddOrUpdateThreadNetwork prints the dataset and
+#   AddNOC prints the fabric's IPK.
+#
+# Don't raise the global level to `trace` either: rs-matter then prints
+# decrypted packet payloads and openthread prints stored settings, both of
+# which carry the same keys. `force` makes this win over an `ESP_LOG` set in
+# your shell, so a stray `ESP_LOG=debug` can't bring the leaks back.
+ESP_LOG = { value = "debug,rs_matter_embassy::ot=warn,rs_matter::im=info", force = true }
 # Force Ninja generator so CMake uses CMAKE_C_COMPILER=clang (set by openthread-sys)
 # instead of defaulting to the Visual Studio generator (which ignores CMAKE_C_COMPILER
 # and always invokes MSVC, breaking the cross-compile sysroot headers).
