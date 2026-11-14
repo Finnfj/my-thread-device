@@ -22,3 +22,8 @@ embassy-executor       = { workspace = true }
 embassy-sync           = { workspace = true }
 rs-matter-embassy      = { workspace = true }
 log                    = { workspace = true }
+
+[features]
+# Spike: automatic light sleep plus a light-sleep report on the serial log
+# (see the `light-sleep` feature of the Platform).
+light-sleep = ["platform/light-sleep"]

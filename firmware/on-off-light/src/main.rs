@@ -159,6 +159,10 @@ async fn main(_s: Spawner) {
         from_cpu_intr0: peripherals.FROM_CPU_INTR0,
         ieee802154: peripherals.IEEE802154,
         bt: peripherals.BT,
+        #[cfg(feature = "light-sleep")]
+        lpwr: peripherals.LPWR,
+        #[cfg(feature = "light-sleep")]
+        timg1: peripherals.TIMG1,
     });
 
     // Create the On/Off cluster handler backed by the global WS2812 hooks.

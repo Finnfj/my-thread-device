@@ -26,6 +26,9 @@
 
 extern crate alloc;
 
+#[cfg(feature = "light-sleep")]
+mod light_sleep;
+
 use core::future::Future;
 use core::pin::pin;
 
@@ -120,6 +123,13 @@ pub struct PlatformPeripherals {
     pub from_cpu_intr0: FROM_CPU_INTR0<'static>,
     pub ieee802154: IEEE802154<'static>,
     pub bt: BT<'static>,
+    /// Spike: lets esp-rtos enter automatic light sleep when idle.
+    #[cfg(feature = "light-sleep")]
+    pub lpwr: esp_hal::peripherals::LPWR<'static>,
+    /// Spike: the free-running "awake clock" the light-sleep report compares
+    /// against wall-clock time.
+    #[cfg(feature = "light-sleep")]
+    pub timg1: esp_hal::peripherals::TIMG1<'static>,
 }
 
 /// A running Platform, ready to run one Device.
@@ -131,6 +141,8 @@ pub struct Platform {
     bt: BT<'static>,
     stack: &'static mut Stack,
     ieee_eui64: [u8; 8],
+    #[cfg(feature = "light-sleep")]
+    timg1: esp_hal::peripherals::TIMG1<'static>,
 }
 
 impl Platform {
@@ -150,7 +162,17 @@ impl Platform {
 
         // Start the Embassy runtime (timer + the scheduler's cross-CPU interrupt).
         let timg0 = TimerGroup::new(p.timg0);
+        #[cfg(not(feature = "light-sleep"))]
         esp_rtos::start(timg0.timer0, p.from_cpu_intr0);
+        // Spike: when no task is ready, no WakeLock is held and the next timer
+        // is far enough away, the idle hook enters light sleep instead of WFI.
+        // esp-hal's default sleep config keeps the modem power domain on.
+        #[cfg(feature = "light-sleep")]
+        {
+            let sleep = esp_rtos::sleep::configure(p.lpwr);
+            esp_rtos::start_with_idle_hook(timg0.timer0, p.from_cpu_intr0, sleep.light_sleep_hook);
+            info!("Automatic light sleep enabled (spike feature `light-sleep`).");
+        }
 
         // Allocate the Matter stack statically — its footprint is ~35-50 KB and
         // a stack allocation of that size would blow the program stack.
@@ -170,6 +192,8 @@ impl Platform {
             bt: p.bt,
             stack,
             ieee_eui64,
+            #[cfg(feature = "light-sleep")]
+            timg1: p.timg1,
         }
     }
 
@@ -200,6 +224,8 @@ impl Platform {
             bt,
             stack,
             ieee_eui64,
+            #[cfg(feature = "light-sleep")]
+            timg1,
         } = self;
 
         let crypto = default_crypto(reseeding_csprng(trng, 1000).unwrap(), DAC_PRIVKEY);
@@ -238,6 +264,11 @@ impl Platform {
             &kv,
             (),
         ));
+        // Spike: the light-sleep report runs next to the Firmware's hardware.
+        #[cfg(feature = "light-sleep")]
+        let hardware = async move {
+            embassy_futures::join::join(hardware, light_sleep::monitor(timg1)).await;
+        };
         let mut hardware = pin!(hardware);
 
         match select(&mut matter, &mut hardware).await {

@@ -21,3 +21,11 @@ rs-matter-embassy      = { workspace = true }
 tinyrlibc              = { workspace = true }
 log                    = { workspace = true }
 static_cell            = { workspace = true }
+embassy-time           = { workspace = true, optional = true }
+
+[features]
+# Spike, off by default: start esp-rtos with its automatic light-sleep idle
+# hook and log a light-sleep report every 10 s, to answer open questions 1-2
+# of docs/research/battery-sensor-esphome-vs-no-std.md on the Test Board.
+# Takes LPWR and TIMG1 in PlatformPeripherals.
+light-sleep = ["dep:embassy-time"]
