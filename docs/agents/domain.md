@@ -44,6 +44,11 @@ When your output names a domain concept (in an issue title, a refactor proposal,
 
 If the concept you need isn't in the glossary yet, that's a signal: either you're inventing language the project doesn't use (reconsider) or there's a real gap (note it for `/domain-modeling`).
 
+## Amending an ADR
+
+- `docs/architecture.md` summarizes each ADR in one line. Amend both together.
+- Mark each claim about what a dependency can or can't do with `(checked in <crate> <version>)` or `(checked in <crate> @<rev>)`. `scripts/adr-version-guard.sh` (run by CI) fails when a marker no longer matches `Cargo.lock`.
+
 ## Flag ADR conflicts
 
 If your output contradicts an existing ADR, surface it explicitly rather than silently overriding:
