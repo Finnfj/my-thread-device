@@ -41,6 +41,7 @@ esp-metadata-generated  = "0.5"
 embassy-executor = "0.10.0"
 embassy-sync     = "0.8"
 embassy-futures  = "0.1"
+embassy-time     = "0.5"
 
 # Matter over Thread stack (git — not yet published to crates.io)
 # Pinned to "Update to esp-radio beta 1" (2a806b0): every later commit needs
