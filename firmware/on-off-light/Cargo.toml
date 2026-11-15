@@ -27,3 +27,5 @@ log                    = { workspace = true }
 # Spike: automatic light sleep plus a light-sleep report on the serial log
 # (see the `light-sleep` feature of the Platform).
 light-sleep = ["platform/light-sleep"]
+# Spike: the same pairing code on every boot (see the Platform's feature).
+fixed-discriminator = ["platform/fixed-discriminator"]

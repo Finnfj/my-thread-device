@@ -29,3 +29,8 @@ embassy-time           = { workspace = true, optional = true }
 # of docs/research/battery-sensor-esphome-vs-no-std.md on the Test Board.
 # Takes LPWR and TIMG1 in PlatformPeripherals.
 light-sleep = ["dep:embassy-time"]
+# Spike, off by default: use rs-matter's fixed test Discriminator instead of
+# a random one, so the pairing code is the same on every boot. Lets the
+# light-sleep measurement commission a Device powered from a charger, with
+# no log to read the code from.
+fixed-discriminator = []

@@ -154,7 +154,13 @@ impl Platform {
 
         // Random discriminator avoids SRP collisions if the device restarts
         // without being properly decommissioned first.
+        #[cfg(not(feature = "fixed-discriminator"))]
         let discriminator = (trng.random() & 0xfff) as u16;
+        // Spike: the same pairing code on every boot, so a Device powered
+        // without a log (from a charger) can be commissioned with a code
+        // noted on an earlier boot.
+        #[cfg(feature = "fixed-discriminator")]
+        let discriminator = TEST_DEV_COMM.discriminator;
 
         // Random IEEE EUI-64 for this Thread device instance.
         let mut ieee_eui64 = [0u8; 8];
