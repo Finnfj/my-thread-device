@@ -47,7 +47,7 @@ If the concept you need isn't in the glossary yet, that's a signal: either you'r
 ## Amending an ADR
 
 - `docs/architecture.md` summarizes each ADR in one line. Amend both together.
-- Mark each claim about what a dependency can or can't do with `(checked in <crate> <version>)` or `(checked in <crate> @<rev>)`. `scripts/adr-version-guard.sh` (run by CI) fails when a marker no longer matches `Cargo.lock`.
+- Mark each claim about what a dependency can or can't do with `(checked in <crate> <version>)` or `(checked in <crate> @<rev>)`. One crate per marker. `scripts/adr-version-guard.sh` (run by CI) fails when a marker no longer matches `Cargo.lock` or names more than one crate.
 
 ## Flag ADR conflicts
 

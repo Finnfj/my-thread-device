@@ -1,5 +1,10 @@
 [target.riscv32imac-unknown-none-elf]
-runner = "espflash flash --monitor --chip esp32c6"
+# Flashes and monitors with espflash, and saves the serial log to
+# target/serial/ (see scripts/flash.sh). Cargo passes the script path to bash
+# as it is, so run `cargo run` from the workspace root. A string, not a list:
+# worktrees under .claude/worktrees also load the main checkout's config, and
+# cargo would join two runner lists into one command.
+runner = "bash scripts/flash.sh"
 
 [env]
 # Log filter for esp-println's logger, read when esp-println is built (so a
