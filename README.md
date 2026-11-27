@@ -116,15 +116,26 @@ Connect the board over USB, then:
 espflash flash target\riscv32imac-unknown-none-elf\debug\on-off-light --baud 1500000
 ```
 
-Or use the Cargo runner shortcut (flashes **and** opens the monitor):
+Or use the Cargo runner shortcut from the workspace root (flashes **and** opens the monitor, through [scripts/flash.sh](scripts/flash.sh)):
 
 ```powershell
 cargo run
 ```
 
+The monitor output is also saved to `target/serial/<UTC time>.log`, so a full
+log from boot is still there after the terminal has scrolled past it.
+
 ---
 
 ## Monitoring the serial output
+
+To watch a running Device again without resetting it (also saved to `target/serial/`):
+
+```powershell
+bash scripts/flash.sh --attach target\riscv32imac-unknown-none-elf\debug\on-off-light
+```
+
+Or plain espflash, which resets the Device and saves nothing:
 
 ```powershell
 espflash monitor --elf target\riscv32imac-unknown-none-elf\debug\on-off-light
