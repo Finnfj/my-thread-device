@@ -22,9 +22,26 @@ lock=$(awk '
   END { if (n) print n, v, (s ? s : "-") }
 ' Cargo.lock)
 
-markers=$(grep -rnoE 'checked in [a-z0-9_-]+ (@[0-9a-f]{7,40}|[0-9][0-9A-Za-z.+-]*[0-9A-Za-z])' docs/adr || true)
+marker='checked in [a-z0-9_-]+ (@[0-9a-f]{7,40}|[0-9][0-9A-Za-z.+-]*[0-9A-Za-z])'
+markers=$(grep -rnoE "$marker" docs/adr || true)
 
 stale=0
+
+# Every "checked in" must be exactly one marker the loop below can check: one
+# crate, then a version or @rev, then ")", "," or ";" (a note such as a file
+# path may follow the comma). Anything else would pass unchecked, e.g. a second
+# crate after a comma, "v1.2.2", or a marker broken across two lines.
+while IFS= read -r m; do
+  [ -z "$m" ] && continue
+  loc=${m%%:checked in *} text="checked in ${m#*checked in }"
+  rest=$(echo "$text" | sed -E "s/^$marker//")
+  if [ "$rest" = "$text" ] || ! echo "$rest" | grep -qE '^([,;]|$)' ||
+    echo "$rest" | grep -qE '[a-z0-9_-]+ (@[0-9a-f]{7,40}|[0-9]+\.[0-9]+)'; then
+    echo "::error file=${loc%%:*},line=${loc##*:}::Malformed marker \"$text\": write one \"(checked in <crate> <version>)\" or \"(checked in <crate> @<rev>)\" per crate, on one line"
+    stale=1
+  fi
+done <<< "$(grep -rnoE 'checked in [^)]*' docs/adr || true)"
+
 while IFS= read -r m; do
   [ -z "$m" ] && continue
   loc=${m%%:checked in *}   # file:line
@@ -42,7 +59,7 @@ while IFS= read -r m; do
 done <<< "$markers"
 
 if [ "$stale" -ne 0 ]; then
-  echo "Re-check each claim above against the version in Cargo.lock, then update its marker."
+  echo "Fix each marker above; for a stale one, re-check its claim against the version in Cargo.lock first."
   exit 1
 fi
 echo "All $(echo "$markers" | grep -c . || true) ADR version markers match Cargo.lock."
