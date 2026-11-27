@@ -29,6 +29,10 @@ extern crate alloc;
 #[cfg(feature = "light-sleep")]
 mod light_sleep;
 
+/// Spike: log how many `WakeLock`s are held, labelled with `at`.
+#[cfg(feature = "light-sleep")]
+pub use light_sleep::log_wake_locks;
+
 use core::future::Future;
 use core::pin::pin;
 
@@ -176,8 +180,10 @@ impl Platform {
         #[cfg(feature = "light-sleep")]
         {
             let sleep = esp_rtos::sleep::configure(p.lpwr);
+            light_sleep::log_wake_locks("before the scheduler starts");
             esp_rtos::start_with_idle_hook(timg0.timer0, p.from_cpu_intr0, sleep.light_sleep_hook);
             info!("Automatic light sleep enabled (spike feature `light-sleep`).");
+            light_sleep::log_wake_locks("after the scheduler starts");
         }
 
         // Allocate the Matter stack statically — its footprint is ~35-50 KB and
@@ -190,6 +196,9 @@ impl Platform {
             },
             &TEST_DEV_ATT,
         ));
+
+        #[cfg(feature = "light-sleep")]
+        light_sleep::log_wake_locks("at the end of Platform::start");
 
         Self {
             _trng_source: trng_source,
@@ -234,7 +243,11 @@ impl Platform {
             timg1,
         } = self;
 
+        #[cfg(feature = "light-sleep")]
+        light_sleep::log_wake_locks("when Platform::run starts");
         let crypto = default_crypto(reseeding_csprng(trng, 1000).unwrap(), DAC_PRIVKEY);
+        #[cfg(feature = "light-sleep")]
+        light_sleep::log_wake_locks("after the crypto set-up");
 
         // The stack serves only the network-dependent Endpoint 0 clusters; the
         // rest (Descriptor, Basic Information, ACL, ...) are ours to chain in.
@@ -249,6 +262,8 @@ impl Platform {
         stack.startup(&crypto, &mut store).await?;
         let stack: &'static Stack = stack;
         let kv = stack.matter().kv(store);
+        #[cfg(feature = "light-sleep")]
+        light_sleep::log_wake_locks("before the Matter stack runs");
 
         info!("Booting Matter stack. Scan the QR code printed below to commission.");
 

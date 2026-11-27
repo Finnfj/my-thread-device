@@ -185,6 +185,9 @@ async fn main(_s: Spawner) {
             Async(desc::DescHandler::new(platform.dataver()).adapt()),
         );
 
+    #[cfg(feature = "light-sleep")]
+    platform::log_wake_locks("before the LED's RMT set-up");
+
     // Initialise the WS2812 LED driver on GPIO8 using the RMT peripheral.
     // We configure the channel at 80 MHz with no clock divider (12.5 ns/tick).
     let rmt = Rmt::new(peripherals.RMT, Rate::from_mhz(80)).unwrap();
@@ -198,6 +201,9 @@ async fn main(_s: Spawner) {
         .configure_tx(&rmt_config)
         .unwrap()
         .with_pin(peripherals.GPIO8);
+
+    #[cfg(feature = "light-sleep")]
+    platform::log_wake_locks("after the LED's RMT set-up");
 
     // LED driving future: waits on LED_SIGNAL and refreshes the WS2812 pixel.
     // Uses the blocking RMT API (transmission takes ~30 µs — negligible here).
