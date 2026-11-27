@@ -1,0 +1,17 @@
+# Partition table for every Firmware (ADR 0008), for the 4 MB flash of the
+# WeAct ESP32-C6-MINI. espflash.toml makes espflash flash it.
+#
+# matter-kv holds all Persisted State. Never move or resize it: Devices
+# flashed with a different offset or size lose their Persisted State.
+# Its subtype is `undefined`, not `nvs`, because its contents are
+# sequential-storage's format, not ESP-IDF NVS.
+#
+# Room left for OTA later, without moving matter-kv: otadata (0x2000) fits in
+# the gap at 0x19000, and the app region from 0x20000 to the end of flash can
+# then be split into two slots of 0x1F0000. For now the factory slot takes all
+# of it, because dev builds (`cargo run`) are about 2.1 MB; a release build is
+# about 1.7 MB and would fit an OTA slot.
+#
+# Name,     Type, SubType,   Offset,   Size
+matter-kv,  data, undefined, 0x9000,   0x10000
+factory,    app,  factory,   0x20000,  0x3E0000

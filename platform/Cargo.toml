@@ -1,6 +1,6 @@
 [package]
 name                   = "platform"
-description            = "Shared foundation for every Firmware: Matter stack set-up, and later Persisted State, Device Identity and Power Mode."
+description            = "Shared foundation for every Firmware: Matter stack set-up and Persisted State, and later Device Identity and Power Mode."
 edition.workspace      = true
 rust-version.workspace = true
 version.workspace      = true
@@ -15,8 +15,10 @@ esp-backtrace          = { workspace = true }
 esp-println            = { workspace = true }
 esp-radio              = { workspace = true }
 esp-storage            = { workspace = true }
+esp-bootloader-esp-idf = { workspace = true }
 esp-metadata-generated = { workspace = true }
 embassy-futures        = { workspace = true }
+embassy-embedded-hal   = { workspace = true }
 rs-matter-embassy      = { workspace = true }
 tinyrlibc              = { workspace = true }
 log                    = { workspace = true }

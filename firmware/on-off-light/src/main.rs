@@ -89,7 +89,7 @@ impl OnOffHooks for WS2812OnOffLogic {
     }
 
     fn set_start_up_on_off(&self, _value: Nullable<StartUpOnOffEnum>) -> Result<(), Error> {
-        // Persistence not yet implemented (DummyKvBlobStore).
+        // Application State is not persisted yet.
         Ok(())
     }
 
@@ -159,6 +159,7 @@ async fn main(_s: Spawner) {
         from_cpu_intr0: peripherals.FROM_CPU_INTR0,
         ieee802154: peripherals.IEEE802154,
         bt: peripherals.BT,
+        flash: peripherals.FLASH,
     });
 
     // Create the On/Off cluster handler backed by the global WS2812 hooks.
