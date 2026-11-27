@@ -1,6 +1,9 @@
 [workspace]
 resolver = "3"
 members  = ["platform", "firmware/on-off-light"]
+# The host-side dev tool: its own workspace, so that `--workspace` builds for
+# the ESP32-C6 never try to compile it (`cargo xtask`, see .cargo/config.toml).
+exclude  = ["xtask"]
 # `cargo build` / `cargo run` at the root build and flash the light.
 default-members = ["firmware/on-off-light"]
 
@@ -24,7 +27,9 @@ esp-rtos = { version = "0.4.0", features = [
 
 esp-bootloader-esp-idf  = { version = "0.6.0", features = ["log-04", "esp32c6"] }
 esp-alloc               = "0.11.0"
-esp-backtrace           = { version = "0.20", features = ["panic-handler", "println", "esp32c6"] }
+# Each Firmware turns on `panic-handler` itself: the on-device tests (ADR 0011)
+# link the Platform with embedded-test's panic handler instead.
+esp-backtrace           = { version = "0.20", features = ["println", "esp32c6"] }
 esp-println             = { version = "0.18.0", features = ["log-04", "esp32c6"] }
 # IEEE 802.15.4 + BLE radio (Thread commissioning + operation)
 # A pre-release on purpose (ADR-0012): 1.0.0-beta.1 is the first esp-radio on
@@ -63,6 +68,15 @@ tinyrlibc = { version = "0.5", default-features = false, features = ["memchr", "
 log = "0.4"
 
 static_cell = "2.1.1"
+
+# On-device tests (ADR 0011), run by `cargo xtask hil` through probe-rs.
+# `external-executor` + `embassy-010`: async tests run on esp-rtos's executor,
+# as in esp-hal's own hardware tests. `log`: test and panic messages go
+# through the `log` crate, which the tests print over semihosting.
+embedded-test = { version = "0.7.3", features = ["embassy-010", "external-executor", "log"] }
+# Host-side stdout for the tests' logger (probe-rs prints it).
+semihosting   = { version = "0.1", features = ["stdio"] }
+embassy-time  = "0.5"
 
 # Patch openthread + openthread-sys to git for commit 679dc18, the fix for a
 # refcount underflow in OpenThread::new_with_udp_srp, the constructor

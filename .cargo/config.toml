@@ -39,5 +39,10 @@ rustflags = [
 # `--target host-tuple` (works on the pinned stable cargo).
 target = "riscv32imac-unknown-none-elf"
 
+[alias]
+# `cargo xtask hil` runs the on-device tests on a Test Board (ADR 0011). xtask
+# is its own workspace and builds for the host; run it from the repo root.
+xtask = "run --quiet --manifest-path xtask/Cargo.toml --target host-tuple --"
+
 [unstable]
 build-std = ["alloc", "core"]

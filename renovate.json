@@ -22,11 +22,12 @@
       "groupName": null
     },
     {
-      "description": "Lockstep Set (see GLOSSARY.md): this list is the single source of truth. Only reported on the Dependency Dashboard; upgraded as a whole by /upgrade-lockstep-set. The [patch.crates-io] openthread crates belong to it too, but Renovate never reads patch tables.",
+      "description": "Lockstep Set (see GLOSSARY.md): this list is the single source of truth. Only reported on the Dependency Dashboard; upgraded as a whole by /upgrade-lockstep-set. The [patch.crates-io] openthread crates belong to it too, but Renovate never reads patch tables. embedded-test is in it because its async tests run on esp-rtos's embassy-executor.",
       "matchDepNames": [
         "esp-*",
         "embassy-executor",
         "embassy-sync",
+        "embedded-test",
         "rs-matter-embassy"
       ],
       "groupName": "Lockstep Set",

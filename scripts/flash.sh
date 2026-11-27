@@ -25,6 +25,14 @@ if [ "${1:-}" = "--attach" ]; then
   [ $# -gt 0 ] && cmd+=(--elf "$1")
 else
   [ $# -gt 0 ] || { echo "usage: $0 ELF [espflash args] | --attach [ELF]" >&2; exit 2; }
+  # `cargo test` would hand this runner the on-device test binary (cargo puts
+  # test binaries under deps/). Those tests erase Persisted State, so they
+  # only run through `cargo xtask hil`, which checks the Test Board opt-in.
+  case "$1" in
+    */deps/* | *'\deps\'*)
+      echo "Not flashing $1: it is an on-device test binary. Run the tests with \`cargo xtask hil\` (README.md, On-device tests)." >&2
+      exit 2 ;;
+  esac
   cmd=(espflash flash --monitor --non-interactive --chip esp32c6 "$@")
 fi
 

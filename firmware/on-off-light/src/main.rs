@@ -12,6 +12,8 @@ use core::sync::atomic::{AtomicBool, Ordering};
 use embassy_executor::Spawner;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
+// The panic handler: prints the panic and a backtrace to the serial log.
+use esp_backtrace as _;
 use esp_hal::gpio::Level;
 use esp_hal::rmt::{PulseCode, Rmt, TxChannelConfig, TxChannelCreator as _};
 use esp_hal::time::Rate;

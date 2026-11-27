@@ -7,11 +7,15 @@ version.workspace      = true
 license.workspace      = true
 publish                = false
 
+# The on-device tests (ADR 0011) are this crate's unit tests, so that they can
+# reach its private modules; embedded-test brings the test harness.
+[lib]
+harness = false
+
 [dependencies]
 esp-hal                = { workspace = true }
 esp-rtos               = { workspace = true }
 esp-alloc              = { workspace = true }
-esp-backtrace          = { workspace = true }
 esp-println            = { workspace = true }
 esp-radio              = { workspace = true }
 esp-storage            = { workspace = true }
@@ -23,3 +27,10 @@ rs-matter-embassy      = { workspace = true }
 tinyrlibc              = { workspace = true }
 log                    = { workspace = true }
 static_cell            = { workspace = true }
+
+[dev-dependencies]
+embedded-test    = { workspace = true }
+# embedded-test's task macro names `embassy_executor` from this crate.
+embassy-executor = { workspace = true }
+semihosting      = { workspace = true }
+embassy-time     = { workspace = true }

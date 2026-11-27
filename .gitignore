@@ -24,3 +24,6 @@ target/
 
 # Ignore .DS_Store file in mac
 **/.DS_Store
+
+# Test Board opt-in for `cargo xtask hil`: probe serial numbers (README.md)
+/test-boards.txt

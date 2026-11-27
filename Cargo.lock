@@ -1392,6 +1392,37 @@ dependencies = [
 ]
 
 [[package]]
+name = "embedded-test"
+version = "0.7.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c2cfbacda78e52f6f53ccd0d6f6f6a41a21b722c3a2d6bbc547aa2500d86521f"
+dependencies = [
+ "embassy-executor",
+ "embedded-test-linker-script",
+ "embedded-test-macros",
+ "log",
+ "semihosting",
+]
+
+[[package]]
+name = "embedded-test-linker-script"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "892fd6c812db2dc4fde8cac39717b772661bb26b24cd54cb5d6d89b37b5cd8c2"
+
+[[package]]
+name = "embedded-test-macros"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a813682474719a83b599380e4b4842ac04617b6c46fff4b8d241df803b730c00"
+dependencies = [
+ "darling 0.24.1",
+ "proc-macro2",
+ "quote",
+ "syn 3.0.5",
+]
+
+[[package]]
 name = "embuild"
 version = "0.33.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2886,6 +2917,7 @@ version = "0.1.0"
 dependencies = [
  "embassy-executor",
  "embassy-sync 0.8.0",
+ "esp-backtrace",
  "esp-bootloader-esp-idf",
  "esp-hal",
  "esp-rtos",
@@ -3048,9 +3080,11 @@ name = "platform"
 version = "0.1.0"
 dependencies = [
  "embassy-embedded-hal",
+ "embassy-executor",
  "embassy-futures",
+ "embassy-time",
+ "embedded-test",
  "esp-alloc",
- "esp-backtrace",
  "esp-bootloader-esp-idf",
  "esp-hal",
  "esp-metadata-generated",
@@ -3060,6 +3094,7 @@ dependencies = [
  "esp-storage",
  "log",
  "rs-matter-embassy",
+ "semihosting",
  "static_cell",
  "tinyrlibc",
 ]
@@ -3555,6 +3590,12 @@ dependencies = [
  "subtle",
  "zeroize",
 ]
+
+[[package]]
+name = "semihosting"
+version = "0.1.25"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f8e4abf97879f4e80db69a9fba7bd64998e9bdad25f58ef045a778e191172fd4"
 
 [[package]]
 name = "semver"

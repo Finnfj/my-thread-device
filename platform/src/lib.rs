@@ -23,19 +23,27 @@
 //! runs with a random Discriminator and EUI-64 on every boot and the shared
 //! test Setup Passcode; the per-Device Setup Passcode required by ADR 0003
 //! arrives with Device Identity (ADR 0007).
+//!
+//! The Platform does not pick a panic handler: each Firmware links one (the
+//! On/Off Light uses esp-backtrace's), and the on-device tests link
+//! embedded-test's. Those tests are this crate's unit tests; `cargo xtask hil`
+//! runs them on a Test Board (ADR 0011, see `src/test_support.rs`).
 
 #![no_std]
+// The unit tests are on-device tests (ADR 0011): embedded-test brings `main`.
+#![cfg_attr(test, no_main)]
 
 extern crate alloc;
 
 mod persist;
+#[cfg(test)]
+mod test_support;
 
 use core::future::Future;
 use core::pin::pin;
 
 use embassy_futures::select::{Either, select};
 use esp_alloc::heap_allocator;
-use esp_backtrace as _;
 use esp_hal::clock::CpuClock;
 use esp_hal::peripherals::{ADC1, BT, FLASH, FROM_CPU_INTR0, IEEE802154, Peripherals, RNG, TIMG0};
 use esp_hal::ram;
