@@ -11,4 +11,5 @@ On-device tests erase Persisted State, so they run only on a dedicated Test Boar
 ## Consequences
 
 - Tier 3 is a goal, not set up yet: it needs a Linux test rig with BLE, a Thread Border Router, and `chip-tool` (for example a Raspberry Pi with an RCP dongle), which the Windows dev machine can't easily provide. A self-hosted CI runner becomes worth it once that rig exists.
-- Not yet verified: that the WeAct ESP32-C6-MINI's USB-C is wired to the chip's native USB (check with `probe-rs list`), and that `embedded-test` works with this project's esp-rtos/Embassy versions.
+- The WeAct ESP32-C6-MINI's USB-C is wired to the chip's native USB-Serial-JTAG (espflash sees Espressif's VID `303A`, no USB-UART bridge), so probe-rs should need no external probe. That port drops while the chip light-sleeps; this and the bench's other limits are in [docs/test-board.md](../test-board.md).
+- Not yet verified: that probe-rs and `embedded-test` work with this project's esp-rtos/Embassy versions.
