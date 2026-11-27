@@ -22,8 +22,10 @@ pairing code printed to the serial monitor in your Matter controller app. After
 commissioning finishes, BLE stops and the device joins the Thread network through
 your Thread Border Router. All subsequent Matter traffic runs over Thread.
 
-State is **not persisted** across reboots (a `DummyKvBlobStore` is used). If the
-device restarts you need to remove it from your controller and re-commission.
+The Device keeps its Commissioning and its Thread network in the `matter-kv`
+flash partition ([platform/src/persist.rs](platform/src/persist.rs)), so after a
+reboot or a reflash it rejoins on its own; no new Commissioning is needed. The
+light itself always starts off.
 
 ---
 
@@ -116,11 +118,14 @@ Connect the board over USB, then:
 espflash flash target\riscv32imac-unknown-none-elf\debug\on-off-light --baud 1500000
 ```
 
-Or use the Cargo runner shortcut (flashes **and** opens the monitor):
+Or use the Cargo runner shortcut from the workspace root (flashes **and** opens the monitor, through [scripts/flash.sh](scripts/flash.sh)):
 
 ```powershell
 cargo run
 ```
+
+The monitor output is also saved to `target/serial/<UTC time>.log`, so a full
+log from boot is still there after the terminal has scrolled past it.
 
 Run either from the repository root: espflash picks up `espflash.toml` there,
 which makes it flash the repo's own partition table (`partitions.csv`, ADR
@@ -140,6 +145,14 @@ cargo run -- --erase-parts matter-kv
 ---
 
 ## Monitoring the serial output
+
+To watch a running Device again without resetting it (also saved to `target/serial/`):
+
+```powershell
+bash scripts/flash.sh --attach target\riscv32imac-unknown-none-elf\debug\on-off-light
+```
+
+Or plain espflash, which resets the Device and saves nothing:
 
 ```powershell
 espflash monitor --elf target\riscv32imac-unknown-none-elf\debug\on-off-light
@@ -226,15 +239,12 @@ the root build and flash the On/Off Light.
 
 ## Known limitations / next steps
 
-- **No persistence** — Matter fabric and network credentials are lost on reboot.
-  Replace `DummyKvBlobStore` with `SeqMapKvBlobStore` backed by `esp-storage` to
-  fix this.
+- **No Factory Reset gesture** — to make a Device uncommissioned again, erase
+  `matter-kv` with `cargo run -- --erase-parts matter-kv` (see Flashing).
 - **Test attestation** — the firmware uses development DAC/PAI certificates
   (`TEST_DEV_ATT`). It cannot be certified and controllers will warn about it.
 - **No color control** — the WS2812B is driven as a simple on/off light (warm
   amber when on). Adding the `ColorControl` cluster is a natural extension.
-- **Single reboot = decommission** — until persistence is added, every reboot
-  requires removing and re-adding the device in your controller app.
 
 ---
 
