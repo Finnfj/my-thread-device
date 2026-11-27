@@ -185,36 +185,71 @@ async fn main(_s: Spawner) {
             Async(desc::DescHandler::new(platform.dataver()).adapt()),
         );
 
-    #[cfg(feature = "light-sleep")]
-    platform::log_wake_locks("before the LED's RMT set-up");
-
     // Initialise the WS2812 LED driver on GPIO8 using the RMT peripheral.
     // We configure the channel at 80 MHz with no clock divider (12.5 ns/tick).
-    let rmt = Rmt::new(peripherals.RMT, Rate::from_mhz(80)).unwrap();
     let rmt_config = TxChannelConfig::default()
         .with_clk_divider(1)
         .with_idle_output_level(Level::Low)
         .with_idle_output(true)
         .with_carrier_modulation(false);
-    let mut led_ch = rmt
-        .channel0
-        .configure_tx(&rmt_config)
-        .unwrap()
-        .with_pin(peripherals.GPIO8);
-
-    #[cfg(feature = "light-sleep")]
-    platform::log_wake_locks("after the LED's RMT set-up");
 
     // LED driving future: waits on LED_SIGNAL and refreshes the WS2812 pixel.
     // Uses the blocking RMT API (transmission takes ~30 µs — negligible here).
-    let led_driver = async move {
-        loop {
-            let on = LED_SIGNAL.wait().await;
-            let data = ws2812_encode(on);
-            let transaction = led_ch.transmit(&data).unwrap();
-            led_ch = transaction.wait().unwrap();
+    #[cfg(not(feature = "light-sleep"))]
+    let led_driver = {
+        let rmt = Rmt::new(peripherals.RMT, Rate::from_mhz(80)).unwrap();
+        let mut led_ch = rmt
+            .channel0
+            .configure_tx(&rmt_config)
+            .unwrap()
+            .with_pin(peripherals.GPIO8);
+
+        async move {
+            loop {
+                let on = LED_SIGNAL.wait().await;
+                let data = ws2812_encode(on);
+                let transaction = led_ch.transmit(&data).unwrap();
+                led_ch = transaction.wait().unwrap();
+            }
         }
     };
+    #[cfg(feature = "light-sleep")]
+    let led_driver = drive_led_per_update(peripherals.RMT, peripherals.GPIO8, rmt_config);
 
     platform.run(NODE, handler, led_driver).await.unwrap();
+}
+
+/// Spike (`light-sleep`): drive the LED with an RMT channel that exists only
+/// for one update.
+///
+/// An RMT channel holds a `WakeLock` for its whole life: esp-hal's clock tree
+/// takes one while the RMT source clock is on, because that clock stops in
+/// light sleep. A channel kept for the whole run therefore blocks light sleep.
+/// Between updates the pin is a plain output driven low, the WS2812's idle
+/// level, so the LED doesn't see a floating data line.
+#[cfg(feature = "light-sleep")]
+async fn drive_led_per_update(
+    mut rmt: esp_hal::peripherals::RMT<'static>,
+    mut pin: esp_hal::peripherals::GPIO8<'static>,
+    rmt_config: TxChannelConfig,
+) {
+    use esp_hal::gpio::{Output, OutputConfig};
+
+    loop {
+        let on = {
+            let _idle = Output::new(pin.reborrow(), Level::Low, OutputConfig::default());
+            LED_SIGNAL.wait().await
+        };
+
+        let channel = Rmt::new(rmt.reborrow(), Rate::from_mhz(80))
+            .unwrap()
+            .channel0
+            .configure_tx(&rmt_config)
+            .unwrap()
+            .with_pin(pin.reborrow());
+        let data = ws2812_encode(on);
+        // Dropping the channel after the transmission releases the RMT clock
+        // and its wake lock.
+        let _channel = channel.transmit(&data).unwrap().wait().unwrap();
+    }
 }
