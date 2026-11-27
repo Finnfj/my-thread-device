@@ -3006,6 +3006,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "persist-stamp"
+version = "0.1.0"
+
+[[package]]
 name = "phf"
 version = "0.11.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3083,6 +3087,7 @@ dependencies = [
  "embassy-executor",
  "embassy-futures",
  "embassy-time",
+ "embedded-storage",
  "embedded-test",
  "esp-alloc",
  "esp-bootloader-esp-idf",
@@ -3093,6 +3098,7 @@ dependencies = [
  "esp-rtos",
  "esp-storage",
  "log",
+ "persist-stamp",
  "rs-matter-embassy",
  "semihosting",
  "static_cell",

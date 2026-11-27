@@ -19,6 +19,8 @@ esp-alloc              = { workspace = true }
 esp-println            = { workspace = true }
 esp-radio              = { workspace = true }
 esp-storage            = { workspace = true }
+embedded-storage       = { workspace = true }
+persist-stamp          = { workspace = true }
 esp-bootloader-esp-idf = { workspace = true }
 esp-metadata-generated = { workspace = true }
 embassy-futures        = { workspace = true }

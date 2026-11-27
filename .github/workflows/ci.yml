@@ -65,6 +65,12 @@ jobs:
       - name: Build on-device tests
         run: cargo test --package platform --lib --no-run --locked --target "$TARGET"
 
+      # Pure-logic crates build for the host to run their tests there.
+      - name: Host tests
+        run: |
+          cargo clippy --package persist-stamp --tests --locked --target host-tuple -- -D warnings
+          cargo test --package persist-stamp --locked --target host-tuple
+
       - name: xtask (clippy, host tests)
         run: |
           cargo clippy --manifest-path xtask/Cargo.toml --locked --target host-tuple --all-targets -- -D warnings

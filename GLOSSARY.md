@@ -20,6 +20,10 @@ _Avoid_: Device (for the hardware), chip, devkit
 The program for one kind of Device. Several identical Devices can run the same Firmware.
 _Avoid_: App, image, binary (when meaning the kind of Device)
 
+**Firmware ID**:
+The fixed name of a Firmware, stored with a Device's Persisted State. A Device that boots into Persisted State stored under another Firmware ID, or in another format version, does a Factory Reset.
+_Avoid_: App ID, firmware version
+
 **Test Board**:
 A Board set aside for automated hardware tests, whose Persisted State may be wiped at any time; never a Device.
 _Avoid_: Dev board, test device
