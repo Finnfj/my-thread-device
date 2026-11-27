@@ -125,6 +125,21 @@ cargo run
 The monitor output is also saved to `target/serial/<UTC time>.log`, so a full
 log from boot is still there after the terminal has scrolled past it.
 
+Run either from the repository root: espflash picks up `espflash.toml` there,
+which makes it flash the repo's own partition table (`partitions.csv`, ADR
+0008). Flashing only writes the bootloader, the partition table and the app,
+so the `matter-kv` partition, and with it a commissioned Device's fabrics and
+Thread dataset, survives a reflash.
+
+Erase `matter-kv` once on a Board that was last flashed without this
+partition table, because the old app image sat where `matter-kv` is now. The
+same flag also brings a Device back to uncommissioned until the Factory Reset
+gesture exists:
+
+```powershell
+cargo run -- --erase-parts matter-kv
+```
+
 ---
 
 ## Monitoring the serial output
@@ -185,13 +200,17 @@ See the comment there before changing it, and rebuild after a change.
 ├── .cargo/
 │   └── config.toml        # Build target, runner, CMAKE_GENERATOR=Ninja
 ├── platform/              # Platform crate: chip + Matter-over-Thread stack bring-up
-│   └── src/lib.rs
+│   └── src/
+│       ├── lib.rs
+│       └── persist.rs     # Persisted State in the matter-kv flash partition
 ├── firmware/
 │   └── on-off-light/      # Firmware: On/Off Light on a WS2812B LED
 │       ├── build.rs       # Linker script wiring
 │       └── src/main.rs    # Device Type, LED driver, entry point
 ├── docs/                  # architecture.md and ADRs
 ├── Cargo.toml             # Workspace, shared dependencies and git pins
+├── espflash.toml          # Makes espflash flash partitions.csv
+├── partitions.csv         # Partition table, with the matter-kv partition
 ├── GLOSSARY.md            # Domain vocabulary
 └── rust-toolchain.toml    # Pins stable Rust + riscv32imac target
 ```
