@@ -11,3 +11,7 @@ Default five-role vocabulary: needs-triage, needs-info, ready-for-agent, ready-f
 ### Domain docs
 
 Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+
+## Dependency sources
+
+`bash scripts/dep-src.sh <crate>` prints the source folder of the version Cargo.lock pins; search there, not across `~/.cargo/registry`. esp-hal's clock tree and per-chip peripheral code live in `esp-metadata-generated`.
