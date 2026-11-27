@@ -1,0 +1,4 @@
+# Read by espflash from the directory it runs in, so flash from the repo root
+# (`cargo run` there does). See partitions.csv and ADR 0008.
+[idf_format_args]
+partition_table = "partitions.csv"

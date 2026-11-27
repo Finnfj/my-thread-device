@@ -8,7 +8,7 @@
 //! #[esp_rtos::main]
 //! async fn main(_s: Spawner) {
 //!     let p = platform::init();
-//!     let mut platform = Platform::start(PlatformPeripherals { /* radio, RNG, timers */ });
+//!     let mut platform = Platform::start(PlatformPeripherals { /* radio, RNG, timers, flash */ });
 //!     // ... set up the Firmware's own hardware from the remaining peripherals ...
 //!     // The Firmware's own endpoints only; the Platform serves Endpoint 0.
 //!     let handler = /* rs-matter handler chain, using platform.dataver() */;
@@ -16,15 +16,19 @@
 //! }
 //! ```
 //!
-//! Persisted State, Device Identity and Power Mode move in here in later
-//! steps. For now the stack runs with `DummyKvBlobStore`, a random
-//! Discriminator and EUI-64 on every boot, and the shared test Setup Passcode;
-//! the per-Device Setup Passcode required by ADR 0003 arrives with Device
-//! Identity (ADR 0007).
+//! Commissioning State and Network State persist in the `matter-kv` flash
+//! partition (see [`persist`]), so a commissioned Device comes back after a
+//! power cycle without Commissioning again. Application State, Device
+//! Identity and Power Mode move in here in later steps. For now the stack
+//! runs with a random Discriminator and EUI-64 on every boot and the shared
+//! test Setup Passcode; the per-Device Setup Passcode required by ADR 0003
+//! arrives with Device Identity (ADR 0007).
 
 #![no_std]
 
 extern crate alloc;
+
+mod persist;
 
 use core::future::Future;
 use core::pin::pin;
@@ -33,7 +37,7 @@ use embassy_futures::select::{Either, select};
 use esp_alloc::heap_allocator;
 use esp_backtrace as _;
 use esp_hal::clock::CpuClock;
-use esp_hal::peripherals::{ADC1, BT, FROM_CPU_INTR0, IEEE802154, Peripherals, RNG, TIMG0};
+use esp_hal::peripherals::{ADC1, BT, FLASH, FROM_CPU_INTR0, IEEE802154, Peripherals, RNG, TIMG0};
 use esp_hal::ram;
 use esp_hal::rng::{Trng, TrngSource};
 use esp_hal::timer::timg::TimerGroup;
@@ -48,7 +52,6 @@ use rs_matter_embassy::matter::dm::devices::test::{
 use rs_matter_embassy::matter::dm::endpoints::ROOT_ENDPOINT_ID;
 use rs_matter_embassy::matter::dm::{Async, AsyncHandler, ChainedHandler, Dataver, Endpoint, Node};
 use rs_matter_embassy::matter::error::Error;
-use rs_matter_embassy::matter::persist::DummyKvBlobStore;
 use rs_matter_embassy::matter::utils::init::InitMaybeUninit;
 use rs_matter_embassy::stack::rand::reseeding_csprng;
 use rs_matter_embassy::wireless::esp::EspThreadDriver;
@@ -112,7 +115,8 @@ pub fn init() -> Peripherals {
 }
 
 /// The peripherals the Platform takes for itself: the radio, the random
-/// number source and the scheduler's timer.
+/// number source, the scheduler's timer and the flash that holds Persisted
+/// State.
 pub struct PlatformPeripherals {
     pub rng: RNG<'static>,
     pub adc1: ADC1<'static>,
@@ -120,6 +124,7 @@ pub struct PlatformPeripherals {
     pub from_cpu_intr0: FROM_CPU_INTR0<'static>,
     pub ieee802154: IEEE802154<'static>,
     pub bt: BT<'static>,
+    pub flash: FLASH<'static>,
 }
 
 /// A running Platform, ready to run one Device.
@@ -130,6 +135,7 @@ pub struct Platform {
     ieee802154: IEEE802154<'static>,
     bt: BT<'static>,
     stack: &'static mut Stack,
+    store: persist::Store,
     ieee_eui64: [u8; 8],
 }
 
@@ -169,6 +175,7 @@ impl Platform {
             ieee802154: p.ieee802154,
             bt: p.bt,
             stack,
+            store: persist::open(p.flash),
             ieee_eui64,
         }
     }
@@ -199,6 +206,7 @@ impl Platform {
             ieee802154,
             bt,
             stack,
+            mut store,
             ieee_eui64,
         } = self;
 
@@ -212,13 +220,17 @@ impl Platform {
             handler,
         );
 
-        // Dummy KV store — Matter state is not persisted across reboots.
-        let mut store = DummyKvBlobStore;
+        // Loads Commissioning State (fabrics, basic info) here; `run` loads
+        // Network State (the Thread dataset) through `kv`.
         stack.startup(&crypto, &mut store).await?;
         let stack: &'static Stack = stack;
         let kv = stack.matter().kv(store);
 
-        info!("Booting Matter stack. Scan the QR code printed below to commission.");
+        if stack.matter().has_fabrics() {
+            info!("Booting Matter stack with the stored Commissioning State.");
+        } else {
+            info!("Booting Matter stack. Scan the QR code printed below to commission.");
+        }
 
         // `stack.run()` drives:
         //   - BLE for commissioning (non-concurrent: BLE stops when Thread starts)
