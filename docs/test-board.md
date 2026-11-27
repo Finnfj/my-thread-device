@@ -12,6 +12,16 @@ checklists around this, not around a generic lab.
 - No separate USB-UART adapter is on hand, so the only log is the
   USB-Serial-JTAG one.
 
+## On-device tests
+
+- probe-rs (0.31.0) lists the Board as an `EspJtag` probe,
+  `303a:1001:58:E6:C5:F9:7D:8C`: the serial number is the chip's MAC address.
+  That serial is what `test-boards.txt` opts in (README, On-device tests).
+- probe-rs and espflash use the same USB port. Close a running serial monitor
+  before `cargo xtask hil`.
+- A run leaves the test binary on the Board, and it only works under probe-rs:
+  flash the Firmware back with `cargo run` afterwards.
+
 ## USB in light sleep
 
 - The USB-Serial-JTAG port disappears as soon as the chip enters light sleep:

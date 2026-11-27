@@ -195,6 +195,66 @@ See the comment there before changing it, and rebuild after a change.
 
 ---
 
+## On-device tests
+
+Platform behaviour that needs the real chip (flash, later eFuse identity and
+the Factory Reset gesture) is tested on a **Test Board** (ADR 0011), with
+[embedded-test](https://github.com/probe-rs/embedded-test) and
+[probe-rs](https://probe.rs/) over the Board's own USB-Serial-JTAG; no
+external probe is needed. The tests are the Platform's unit tests, in
+[platform/src/](platform/src/) under `#[cfg(test)]`.
+
+> **The tests erase Persisted State.** A commissioned Device loses its
+> Commissioning, so `cargo xtask hil` only runs on a Board you opted in.
+
+Install probe-rs once:
+
+```powershell
+cargo install probe-rs-tools
+```
+
+### Opt a Board in
+
+1. Plug the Board in and list the probes:
+
+   ```powershell
+   probe-rs list
+   ```
+
+   The Board shows up as `ESP JTAG -- 303a:1001:58:E6:C5:F9:7D:8C (EspJtag)`.
+   Its serial number is the part after `303a:1001:` (the chip's MAC address).
+2. Add that serial number as a line to `test-boards.txt` in the repository
+   root (gitignored; one serial number per line, `#` starts a comment):
+
+   ```
+   # WeAct ESP32-C6-MINI on the bench
+   58:E6:C5:F9:7D:8C
+   ```
+
+### Run the tests
+
+From the repository root:
+
+```powershell
+cargo xtask hil
+```
+
+It builds the tests, flashes them with probe-rs to the opted-in Board only
+(by its serial number, together with `partitions.csv`) and runs each test
+after a reset. Arguments filter by test name, for example
+`cargo xtask hil survives_reset`. With no opted-in probe connected, it refuses
+and runs nothing. A plain `cargo test` builds the tests but refuses to flash
+them, because its runner is espflash, which has no opt-in check.
+
+### Afterwards
+
+The Board is left with the test binary and an empty `matter-kv`. Flash the
+Firmware again with `cargo run` and commission it. If the Board is also your
+Device, remove its line from `test-boards.txt` once you are done, so that a
+later `cargo xtask hil` can't wipe it while it is commissioned.
+
+---
+
 ## Project structure
 
 ```
@@ -202,13 +262,16 @@ See the comment there before changing it, and rebuild after a change.
 ├── .cargo/
 │   └── config.toml        # Build target, runner, CMAKE_GENERATOR=Ninja
 ├── platform/              # Platform crate: chip + Matter-over-Thread stack bring-up
+│   ├── build.rs           # Linker scripts for the on-device test binary
 │   └── src/
 │       ├── lib.rs
-│       └── persist.rs     # Persisted State in the matter-kv flash partition
+│       ├── persist.rs     # Persisted State in the matter-kv flash partition
+│       └── test_support.rs # Set-up shared by the on-device tests
 ├── firmware/
 │   └── on-off-light/      # Firmware: On/Off Light on a WS2812B LED
 │       ├── build.rs       # Linker script wiring
 │       └── src/main.rs    # Device Type, LED driver, entry point
+├── xtask/                 # `cargo xtask hil`: on-device tests on a Test Board
 ├── docs/                  # architecture.md and ADRs
 ├── Cargo.toml             # Workspace, shared dependencies and git pins
 ├── espflash.toml          # Makes espflash flash partitions.csv

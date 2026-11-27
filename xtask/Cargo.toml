@@ -1,0 +1,13 @@
+[package]
+name         = "xtask"
+description  = "Developer commands for this repository, run as `cargo xtask` (see .cargo/config.toml)."
+edition      = "2024"
+rust-version = "1.88"
+version      = "0.1.0"
+license      = "MIT OR Apache-2.0"
+publish      = false
+
+# Its own workspace: xtask builds for the host, the main workspace for the
+# ESP32-C6, so `cargo build --workspace` there must not pick it up. No
+# dependencies on purpose: it only runs cargo and probe-rs.
+[workspace]

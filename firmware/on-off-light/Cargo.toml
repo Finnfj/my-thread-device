@@ -18,6 +18,7 @@ platform               = { workspace = true }
 esp-hal                = { workspace = true }
 esp-rtos               = { workspace = true }
 esp-bootloader-esp-idf = { workspace = true }
+esp-backtrace          = { workspace = true, features = ["panic-handler"] }
 embassy-executor       = { workspace = true }
 embassy-sync           = { workspace = true }
 rs-matter-embassy      = { workspace = true }

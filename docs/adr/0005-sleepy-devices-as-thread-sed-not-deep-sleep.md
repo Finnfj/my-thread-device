@@ -17,7 +17,7 @@ Amended on 2026-11-14 after [the battery sensor research](../research/battery-se
 
   Sleepy Devices are a goal, not a feature, until radio sleep exists here or upstream.
 - Persistence does not depend on this and goes first.
-- A Sleepy Device Firmware can't keep RMT, UART, SPI or similar drivers alive between uses: their clocks stop in light sleep, so esp-hal takes a wake lock for as long as such a driver exists (checked in esp-hal 1.2.2; checked in esp-metadata-generated 0.5.3). It creates them per use and drops them afterwards.
+- A Sleepy Device Firmware can't keep RMT, UART, SPI or similar drivers alive between uses: their clocks stop in light sleep, so esp-hal takes a wake lock for as long as such a driver exists (checked in esp-hal 1.2.2), as its per-chip code in esp-metadata-generated sets out (checked in esp-metadata-generated 0.5.3). It creates them per use and drops them afterwards.
 - The deep-sleep variant needs OpenThread's settings persisted, which ADR-0006 currently leaves in RAM, so ADR-0006 must be revisited before building one. It also needs rs-matter's `case-resumption` and `persistent-subscriptions` features turned on.
 - Only GPIO0–7 can wake the ESP32-C6 from deep sleep, and only on a level, not an edge. A deep-sleeping sensor's wake pin must be one of those and be re-armed to the opposite level before each sleep. The BOOT button (GPIO9) cannot wake it.
 - ADR-0010 keeps the commissioning window open until the Device is commissioned, which means advertising over BLE indefinitely on battery. Sleepy Devices need a bounded window or a button trigger. That is not decided yet.
