@@ -13,10 +13,14 @@
 # BLE meets at bt-hci-transport, not bt-hci: esp-radio 1.0.0-beta.1 hands
 # trouble-host a bt_hci_transport::Transport, and still pulls bt-hci 0.9 for
 # a legacy impl nothing here uses, next to trouble-host's bt-hci 0.10.
+# embassy-executor-timer-queue meets through a link symbol, not a type:
+# embassy-executor allocates the timer queue items and embassy-time-queue-utils
+# (under esp-rtos) fills them, each through its own copy of the crate. Two
+# copies would build and link, and the item size could differ at run time.
 set -euo pipefail
 
 TARGET="${TARGET:-riscv32imac-unknown-none-elf}"
-SEAM_CRATES='bt-hci-transport|trouble-host|esp-[a-z0-9-]+|rs-matter[a-z0-9-]*|openthread(-sys)?|embassy-executor'
+SEAM_CRATES='bt-hci-transport|trouble-host|esp-[a-z0-9-]+|rs-matter[a-z0-9-]*|openthread(-sys|-driver|-driver-esp)?|embassy-executor(-timer-queue)?'
 
 # "name vX.Y.Z" for every crate that appears in more than one version.
 pairs=$(cargo tree --workspace --locked --target "$TARGET" -e normal -d --depth 0 --prefix none \

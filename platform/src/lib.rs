@@ -21,7 +21,8 @@
 //! power cycle without Commissioning again. That state is stamped with the
 //! Firmware ID and a format version; a Device that boots into another
 //! Firmware's state, or another format, Factory Resets (ADR 0009).
-//! Application State, Device Identity and Power Mode move in here in later
+//! A Firmware keeps its Application State under [`APPLICATION_KEYS`], in the
+//! same partition. Device Identity and Power Mode move in here in later
 //! steps. For now the stack
 //! runs with a random Discriminator and EUI-64 on every boot and the shared
 //! test Setup Passcode; the per-Device Setup Passcode required by ADR 0003
@@ -39,6 +40,8 @@
 extern crate alloc;
 
 mod persist;
+
+pub use persist::APPLICATION_KEYS;
 #[cfg(test)]
 mod test_support;
 
@@ -54,25 +57,28 @@ use esp_hal::rng::{Trng, TrngSource};
 use esp_hal::timer::timg::TimerGroup;
 use esp_metadata_generated::memory_range;
 use log::info;
-use rs_matter_embassy::matter::BasicCommData;
 use rs_matter_embassy::matter::crypto::{Crypto, Rng, default_crypto};
 use rs_matter_embassy::matter::dm::clusters::basic_info::BasicInfoConfig;
 use rs_matter_embassy::matter::dm::devices::test::{
-    DAC_PRIVKEY, TEST_DEV_ATT, TEST_DEV_COMM, TEST_DEV_DET,
+    DAC_PRIVKEY, TEST_BASIC_COMM, TEST_DEV_ATT, TEST_DEV_DET,
 };
 use rs_matter_embassy::matter::dm::endpoints::ROOT_ENDPOINT_ID;
 use rs_matter_embassy::matter::dm::{Async, AsyncHandler, ChainedHandler, Dataver, Endpoint, Node};
 use rs_matter_embassy::matter::error::Error;
 use rs_matter_embassy::matter::utils::init::InitMaybeUninit;
-use rs_matter_embassy::stack::rand::reseeding_csprng;
-use rs_matter_embassy::wireless::esp::EspThreadDriver;
-use rs_matter_embassy::wireless::{EmbassyThread, EmbassyThreadMatterStack};
+use rs_matter_embassy::matter::{BasicCommData, root_endpoint};
+use rs_matter_embassy::rand::reseeding_csprng;
+use rs_matter_embassy::stack::MatterStack;
+use rs_matter_embassy::stack::wireless::BTP_BUMP_SIZE;
+use rs_matter_embassy::wireless::esp::EspThreadRadio;
+use rs_matter_embassy::wireless::{EmbassyThread, EmbassyThreadNetwork};
 use tinyrlibc as _;
 
 // ── Memory layout ────────────────────────────────────────────────────────────
 
-/// Bump allocator size for rs-matter-stack futures during `run*` methods.
-const BUMP_SIZE: usize = 25_000;
+/// Bump allocator size for rs-matter-stack futures during `run*` methods,
+/// plus the BTP transport that BLE Commissioning puts in it.
+const BUMP_SIZE: usize = 25_000 + BTP_BUMP_SIZE;
 
 /// Total heap size (100 KB).
 const HEAP_SIZE: usize = 102_400;
@@ -82,7 +88,7 @@ const RECLAIMED_RAM: usize =
     memory_range!("DRAM2_UNINIT").end - memory_range!("DRAM2_UNINIT").start;
 
 /// The Matter stack type every Device runs.
-type Stack = EmbassyThreadMatterStack<'static, BUMP_SIZE, ()>;
+type Stack = MatterStack<'static, BUMP_SIZE, EmbassyThreadNetwork>;
 
 /// Device basic info — the SAI field is required by the Thread SRP registration.
 ///
@@ -105,8 +111,14 @@ macro_rules! mk_static {
 // ── Start-up ─────────────────────────────────────────────────────────────────
 
 /// The Matter endpoint 0 every Device must list first in its [`Node`].
+///
+/// Thread Network Diagnostics advertises the MLE and MAC counters, which
+/// rs-matter-embassy reads from OpenThread.
 pub const fn root_endpoint() -> Endpoint<'static> {
-    Stack::root_endpoint()
+    // A `const`, so that the cluster list the macro builds is promoted to
+    // `'static`.
+    const ENDPOINT: Endpoint<'static> = root_endpoint!(thread, thread_diag(mle_counts, mac_counts));
+    ENDPOINT
 }
 
 /// Bring up logging, the heap and the chip, and hand back all peripherals.
@@ -145,7 +157,7 @@ pub struct Platform {
     trng: Trng,
     ieee802154: IEEE802154<'static>,
     bt: BT<'static>,
-    stack: &'static mut Stack,
+    stack: &'static Stack,
     store: persist::Store,
     ieee_eui64: [u8; 8],
 }
@@ -168,8 +180,8 @@ impl Platform {
         let trng_source = TrngSource::new(p.rng, p.adc1);
         let mut trng = Trng::try_new().unwrap();
 
-        // Random discriminator avoids SRP collisions if the device restarts
-        // without being properly decommissioned first.
+        // A random Discriminator, as in the upstream example, until Device
+        // Identity (ADR 0007) gives each Device its own.
         let discriminator = (trng.random() & 0xfff) as u16;
 
         // Random IEEE EUI-64 for this Thread device instance.
@@ -182,12 +194,13 @@ impl Platform {
 
         // Allocate the Matter stack statically — its footprint is ~35-50 KB and
         // a stack allocation of that size would blow the program stack.
-        let stack = mk_static!(Stack).init_with(Stack::init(
+        let stack: &'static Stack = mk_static!(Stack).init_with(Stack::init(
             &TEST_BASIC_INFO,
             BasicCommData {
-                password: TEST_DEV_COMM.password,
+                password: TEST_BASIC_COMM.password,
                 discriminator,
-            },
+            }
+            .into(),
             &TEST_DEV_ATT,
         ));
 
@@ -238,14 +251,17 @@ impl Platform {
         // rest (Descriptor, Basic Information, ACL, ...) are ours to chain in.
         let handler = ChainedHandler::new(
             |endpoint, _| endpoint == ROOT_ENDPOINT_ID,
-            Async(Stack::root_handler(&(), crypto.weak_rand()?)),
+            Async(Stack::root_handler(
+                stack.matter(),
+                &(),
+                crypto.weak_rand()?,
+            )),
             handler,
         );
 
         // Loads Commissioning State (fabrics, basic info) here; `run` loads
         // Network State (the Thread dataset) through `kv`.
         stack.startup(&crypto, &mut store).await?;
-        let stack: &'static Stack = stack;
         let kv = stack.matter().kv(store);
 
         if stack.matter().has_fabrics() {
@@ -258,9 +274,9 @@ impl Platform {
         //   - BLE for commissioning (non-concurrent: BLE stops when Thread starts)
         //   - OpenThread networking
         //   - Matter protocol (exchanges, subscriptions, etc.)
-        let mut matter = pin!(stack.run(
+        let mut matter = pin!(stack.run_thread_no_coex(
             EmbassyThread::new(
-                EspThreadDriver::new(ieee802154, bt),
+                EspThreadRadio::new(ieee802154, bt),
                 crypto.rand()?,
                 ieee_eui64,
                 &kv,

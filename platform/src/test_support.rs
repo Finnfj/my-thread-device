@@ -30,7 +30,7 @@ fn setup() {
 /// does not reset itself while probe-rs holds it halted for semihosting.
 ///
 /// Raw register writes, after esp-hal's own hardware tests (checked in
-/// esp-hal 1.2.2): no esp-hal driver is set up yet at this point.
+/// esp-hal 1.2.3): no esp-hal driver is set up yet at this point.
 fn disable_watchdogs() {
     const WKEY: u32 = 0x50D8_3AA1;
 
