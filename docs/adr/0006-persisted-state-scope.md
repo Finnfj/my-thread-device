@@ -1,6 +1,6 @@
 # What Persisted State covers, and what it deliberately doesn't
 
-Persisted State covers Commissioning State (stored by the Matter stack), Network State, and Application State (each Firmware's own, under keys the Platform sets aside for it; rs-matter's On/Off cluster handler stores its `OnOff` and `StartUpOnOff` attributes itself, under a key the Firmware picks, checked in rs-matter 0.5.0). Device Identity is not stored at all: it is derived from the chip's factory MAC so it stays the same across Factory Reset and full flash erase, and the Pairing Code printed for a Device stays valid for its whole life.
+Persisted State covers Commissioning State (stored by the Matter stack), Network State, and Application State (each Firmware's own, under keys the Platform sets aside for it; rs-matter's On/Off cluster handler stores its `OnOff` and `StartUpOnOff` attributes itself, under a key the Firmware picks, checked in rs-matter-dm 0.5.0). Device Identity is not stored at all: it is derived from the chip's factory MAC so it stays the same across Factory Reset and full flash erase, and the Pairing Code printed for a Device stays valid for its whole life.
 
 Network State is the Thread dataset, which the Matter stack stores, plus the OpenThread settings rs-matter-embassy persists: the active dataset, network info (with the frame counters), parent info, the SLAAC secret, and the SRP key and server (checked in rs-matter-embassy @d9456b8). So after a reboot a Device re-attaches to its old parent with one Child Update Request while its child entry is still valid, instead of attaching from scratch. The rest of OpenThread's settings stay in RAM.
 
@@ -11,5 +11,5 @@ Application State outlives Decommissioning (a light remembers its start-up behav
 ## Consequences
 
 - The random Discriminator generated on every boot (copied from the upstream example) must be replaced, or the Pairing Code changes on every boot. The random EUI-64 no longer clashes with the stored SRP key: the SRP host name is the Thread extended address, which OpenThread keeps in its persisted settings together with that key (checked in rs-matter-embassy @d9456b8).
-- rs-matter does not do the automatic clearing on its own: `RemoveFabric` deletes only that fabric's record, and the Thread dataset stays stored (checked in rs-matter 0.5.0, `remove_fabric` in rs-matter-node). The Platform has to notice that the last fabric is gone and clear Network State itself.
+- rs-matter does not do the automatic clearing on its own: `RemoveFabric` deletes only that fabric's record, and the Thread dataset stays stored (checked in rs-matter-node 0.5.0, `remove_fabric`). The Platform has to notice that the last fabric is gone and clear Network State itself.
 - After clearing Network State on Decommissioning, the Platform reboots the Device, so it comes back exactly like a freshly flashed one (uncommissioned, advertising over BLE) instead of tearing down Thread while running.

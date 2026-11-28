@@ -180,8 +180,8 @@ impl Platform {
         let trng_source = TrngSource::new(p.rng, p.adc1);
         let mut trng = Trng::try_new().unwrap();
 
-        // Random discriminator avoids SRP collisions if the device restarts
-        // without being properly decommissioned first.
+        // A random Discriminator, as in the upstream example, until Device
+        // Identity (ADR 0007) gives each Device its own.
         let discriminator = (trng.random() & 0xfff) as u16;
 
         // Random IEEE EUI-64 for this Thread device instance.

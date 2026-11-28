@@ -52,7 +52,7 @@ Device Identity is never stored. The Setup Passcode and Discriminator are derive
 
 ## Persisted State on flash
 
-Persisted State lives in a dedicated `matter-kv` data partition defined by the repo's own partition table, as a key-value map with wear levelling. The Matter stack stores Commissioning State and the Thread dataset itself; the Platform adds the Firmware ID and format version and hands each endpoint its own slots for Application State. rs-matter-embassy also stores the OpenThread settings a quick re-attach needs (network and parent info, frame counters, the SRP key). ([ADR 0006](adr/0006-persisted-state-scope.md), [ADR 0008](adr/0008-own-partition-table.md))
+Persisted State lives in a dedicated `matter-kv` data partition defined by the repo's own partition table, as a key-value map with wear levelling. The Matter stack stores Commissioning State and the Thread dataset itself; the Platform adds the Firmware ID and format version and sets aside a key range for the Firmware's Application State. rs-matter-embassy also stores the OpenThread settings a quick re-attach needs (network and parent info, frame counters, the SRP key). ([ADR 0006](adr/0006-persisted-state-scope.md), [ADR 0008](adr/0008-own-partition-table.md))
 
 ## Power
 

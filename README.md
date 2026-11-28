@@ -25,7 +25,8 @@ your Thread Border Router. All subsequent Matter traffic runs over Thread.
 The Device keeps its Commissioning and its Thread network in the `matter-kv`
 flash partition ([platform/src/persist.rs](platform/src/persist.rs)), so after a
 reboot or a reflash it rejoins on its own; no new Commissioning is needed. The
-light itself always starts off.
+light comes back on or off as it was, a few seconds after the last switch, as
+rs-matter's On/Off cluster stores its state there too.
 
 ---
 
@@ -58,10 +59,10 @@ declared in `rust-toolchain.toml` and installed automatically.
 ### C build tools (required for OpenThread)
 
 OpenThread is a C library. The Rust crate ships **pre-compiled** static
-libraries for `riscv32imac-unknown-none-elf` when using the published crates.io
-versions, but this project pins to the git HEAD of
-[esp-rs/openthread](https://github.com/esp-rs/openthread) (for a bundled-MbedTLS
-fix), which must be compiled from source.
+libraries for `riscv32imac-unknown-none-elf`, but only for its default
+features. This project also sets OpenThread's internal heap to 8 KiB
+(rs-matter-embassy's `openthread-heap-int-8192`), so OpenThread is compiled
+from source.
 
 You need:
 

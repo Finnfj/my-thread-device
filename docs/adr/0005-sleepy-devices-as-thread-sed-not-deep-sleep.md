@@ -11,7 +11,7 @@ Amended on 2026-11-14 after [the battery sensor research](../research/battery-se
 ## Consequences
 
 - What blocks Sleepy Devices now is ESP 802.15.4 radio sleep. esp-radio has no way to turn the receiver off (esp-hal PR #6429 is open; checked in esp-radio 1.0.0-beta.1), and `EspRadio::set_sleep` is a TODO (checked in openthread-driver-esp 0.1.0), so a SED keeps its receiver on at about 74 mA. The other pieces exist at the pinned versions but are not wired up:
-  - rs-matter has the ICD Management cluster, Check-In and the active/idle power mode loop, `Icd` (checked in rs-matter 0.5.0).
+  - rs-matter has the ICD Management cluster, Check-In and the active/idle power mode loop, `Icd` (checked in rs-matter-dm 0.5.0).
   - esp-rtos has experimental automatic light sleep (checked in esp-rtos 0.4.0). Measured on the Test Board (PR #16): esp-radio releases its wake lock when BLE stops after Commissioning (checked in esp-radio 1.0.0-beta.1), but with the receiver still on, the Device then never finished joining Thread. Light sleep only pays off together with SED mode and radio sleep.
   - The openthread binding has link mode and poll period (checked in openthread 0.5.0). Given an `Icd` through `EmbassyThread::with_icd`, rs-matter-embassy runs the node as a SED and polls at the ICD's interval (checked in rs-matter-embassy @d9456b8). The Platform passes it none yet.
 

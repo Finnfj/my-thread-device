@@ -24,8 +24,8 @@
 //! The Platform stamps the partition with the Firmware ID and
 //! [`FORMAT_VERSION`]. When [`open`] finds another stamp, it Factory Resets
 //! before the Matter stack loads anything: it erases the whole partition,
-//! which clears Commissioning State, Network State, Application State, the
-//! SRP key and the Platform's own keys at once.
+//! which clears Commissioning State, Network State (with the OpenThread
+//! settings), Application State and the Platform's own keys at once.
 
 use core::ops::Range;
 
@@ -46,12 +46,13 @@ const PARTITION_LABEL: &str = "matter-kv";
 
 /// The version of the Persisted State format.
 ///
-/// Bump it whenever the stored layout changes: ours (the Platform's keys and,
-/// once it moves in, Application State) or rs-matter's (what rs-matter and
+/// Bump it whenever the stored layout changes: ours (the Platform's keys and
+/// the Firmware's Application State) or rs-matter's (what rs-matter and
 /// rs-matter-embassy store under their keys, so check on every Lockstep Set
 /// upgrade). Every Device that takes the update then Factory Resets and has
 /// to be commissioned again (ADR 0009).
 ///
+/// - 1: rs-matter 0.4.1 and rs-matter-embassy @2a806b0.
 /// - 2: rs-matter 0.5 and rs-matter-embassy @d9456b8. Key `0x1000` holds the
 ///   OpenThread settings blob instead of the bare SRP key.
 pub(crate) const FORMAT_VERSION: u16 = 2;
