@@ -23,3 +23,7 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/ag
 ## On-device tests
 
 `cargo xtask hil` runs the Platform's unit tests on a Test Board; set-up and probe-rs limits are in `platform/src/test_support.rs` and ADR 0011. The first build of the test binary takes minutes: run it in the background.
+
+## Before opening a PR
+
+Run the `code-review` skill against `origin/master`; this repo's review rules are in `CODING_STANDARDS.md`.

@@ -1,4 +1,7 @@
 {
+  "env": {
+    "PYTHONUTF8": "1"
+  },
   "permissions": {
     "ask": [
       "Bash(espflash flash *)",
