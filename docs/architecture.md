@@ -2,7 +2,7 @@
 
 This repository builds self-built, personal smart-home **Devices** that speak Matter over Thread, in no_std Rust. The words used here are defined in [GLOSSARY.md](../GLOSSARY.md); the reasons behind each choice are in [docs/adr/](adr/).
 
-> **Status (2026-11):** this describes the target shape. The workspace has the Platform crate and one Firmware (the WS2812 On/Off Light), and `xtask/` runs the on-device tests (`cargo xtask hil`). `identity/` does not exist yet. Commissioning State and Network State persist in `matter-kv`; Application State, the Firmware ID check and Factory Reset are not implemented yet.
+> **Status (2026-11):** this describes the target shape. The workspace has the Platform crate and one Firmware (the WS2812 On/Off Light), and `xtask/` runs the on-device tests (`cargo xtask hil`). `identity/` does not exist yet. Commissioning State and Network State persist in `matter-kv`, stamped with the Firmware ID. Application State is only what rs-matter's On/Off cluster stores itself, and the Factory Reset gesture is not implemented yet.
 
 ## Layers
 
@@ -52,7 +52,7 @@ Device Identity is never stored. The Setup Passcode and Discriminator are derive
 
 ## Persisted State on flash
 
-Persisted State lives in a dedicated `matter-kv` data partition defined by the repo's own partition table, as a key-value map with wear levelling. The Matter stack stores Commissioning State and the Thread dataset itself; the Platform adds the Firmware ID and format version and hands each endpoint its own slots for Application State. OpenThread's own settings (frame counters, parent info) are deliberately not stored. ([ADR 0006](adr/0006-persisted-state-scope.md), [ADR 0008](adr/0008-own-partition-table.md))
+Persisted State lives in a dedicated `matter-kv` data partition defined by the repo's own partition table, as a key-value map with wear levelling. The Matter stack stores Commissioning State and the Thread dataset itself; the Platform adds the Firmware ID and format version and hands each endpoint its own slots for Application State. rs-matter-embassy also stores the OpenThread settings a quick re-attach needs (network and parent info, frame counters, the SRP key). ([ADR 0006](adr/0006-persisted-state-scope.md), [ADR 0008](adr/0008-own-partition-table.md))
 
 ## Power
 

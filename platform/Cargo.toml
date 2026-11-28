@@ -26,6 +26,8 @@ esp-metadata-generated = { workspace = true }
 embassy-futures        = { workspace = true }
 embassy-embedded-hal   = { workspace = true }
 rs-matter-embassy      = { workspace = true }
+# Only to select the chip on it, see the workspace manifest.
+openthread-driver-esp  = { workspace = true }
 tinyrlibc              = { workspace = true }
 log                    = { workspace = true }
 static_cell            = { workspace = true }

@@ -69,7 +69,7 @@ _Avoid_: Settings, config, NVS, storage
 The Persisted State that makes a Device belong to its controllers: fabrics, access control, and operational certificates. Cleared by Decommissioning and by Factory Reset.
 
 **Network State**:
-The Persisted State that lets a Device rejoin its Thread network without Commissioning again: the Thread dataset. Cleared by Decommissioning and by Factory Reset.
+The Persisted State that lets a Device rejoin its Thread network without Commissioning again: the Thread dataset, and the OpenThread settings that let it re-attach to its parent quickly. Cleared by Decommissioning and by Factory Reset.
 _Avoid_: Credentials, Wi-Fi settings
 
 **Application State**:

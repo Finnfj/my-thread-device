@@ -11,9 +11,13 @@
 //! # Keys
 //!
 //! - `0x0000..0x1000`: rs-matter's own (it ends at `VENDOR_KEYS_START`).
-//! - `0x1000..0x1100`: rs-matter-embassy, which stores the OpenThread SRP key
-//!   at `0x1000` (checked in rs-matter-embassy @2a806b0).
+//! - `0x1000..0x1100`: rs-matter-embassy, which stores the persisted subset of
+//!   the OpenThread settings (the active dataset, network and parent info, the
+//!   SRP key) as one blob at `0x1000` (checked in rs-matter-embassy @d9456b8).
 //! - `0x1100..0x1200`: the Platform's own, [`PLATFORM_KEYS`].
+//! - `0x1200..0x1300`: the Firmware's Application State,
+//!   [`APPLICATION_KEYS`], for example the key an rs-matter On/Off cluster
+//!   handler stores its `OnOff` and `StartUpOnOff` attributes under.
 //!
 //! # Factory Reset on a mismatch (ADR 0009)
 //!
@@ -47,11 +51,18 @@ const PARTITION_LABEL: &str = "matter-kv";
 /// rs-matter-embassy store under their keys, so check on every Lockstep Set
 /// upgrade). Every Device that takes the update then Factory Resets and has
 /// to be commissioned again (ADR 0009).
-pub(crate) const FORMAT_VERSION: u16 = 1;
+///
+/// - 2: rs-matter 0.5 and rs-matter-embassy @d9456b8. Key `0x1000` holds the
+///   OpenThread settings blob instead of the bare SRP key.
+pub(crate) const FORMAT_VERSION: u16 = 2;
 
 /// The keys reserved for the Platform's own records. See the module docs for
 /// the whole key layout.
 pub(crate) const PLATFORM_KEYS: Range<u16> = 0x1100..0x1200;
+
+/// The keys a Firmware stores its Application State under. See the module
+/// docs for the whole key layout.
+pub const APPLICATION_KEYS: Range<u16> = PLATFORM_KEYS.end..PLATFORM_KEYS.end + 0x100;
 
 // rs-matter-embassy keeps the first 0x100 vendor keys.
 const _: () = assert!(PLATFORM_KEYS.start >= VENDOR_KEYS_START + 0x100);

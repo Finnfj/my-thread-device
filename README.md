@@ -303,7 +303,8 @@ the root build and flash the On/Off Light.
 | [`esp-rtos`](https://github.com/esp-rs/esp-hal) | Embassy runtime glue for ESP chips |
 | [`esp-radio`](https://github.com/esp-rs/esp-hal) | IEEE 802.15.4 + BLE radio driver |
 | [`rs-matter-embassy`](https://github.com/sysgrok/rs-matter-embassy) *(git)* | High-level Matter + Thread + BLE commissioning stack |
-| [`openthread`](https://github.com/esp-rs/openthread) *(git HEAD)* | Rust bindings for the OpenThread C library |
+| [`openthread`](https://github.com/esp-rs/openthread) | Rust bindings for the OpenThread C library |
+| [`openthread-driver-esp`](https://github.com/esp-rs/openthread) | The ESP32-C6 IEEE 802.15.4 radio under OpenThread |
 | [`tinyrlibc`](https://github.com/rust-embedded-community/tinyrlibc) | C `str*` polyfills required by the pre-compiled OpenThread library |
 | [`embassy-*`](https://embassy.dev/) | Async executor, synchronisation primitives, time |
 | [`esp-backtrace`](https://github.com/esp-rs/esp-hal) | Panic handler and stack-trace printer |

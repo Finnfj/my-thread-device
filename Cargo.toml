@@ -9,7 +9,7 @@ default-members = ["firmware/on-off-light"]
 
 [workspace.package]
 edition      = "2024"
-rust-version = "1.88"
+rust-version = "1.92"
 version      = "0.1.0"
 license      = "MIT OR Apache-2.0"
 
@@ -18,7 +18,7 @@ platform      = { path = "platform" }
 persist-stamp = { path = "persist-stamp" }
 
 # ESP-HAL — log-04 instead of defmt
-esp-hal = { version = "~1.2.0", features = ["log-04", "esp32c6", "unstable"] }
+esp-hal = { version = "~1.2.3", features = ["log-04", "esp32c6", "unstable"] }
 
 esp-rtos = { version = "0.4.0", features = [
   "esp-radio",
@@ -54,18 +54,21 @@ embassy-futures  = "0.1"
 # BlockingAsync: the async NorFlash view of esp-storage that SeqMapKvBlobStore takes
 embassy-embedded-hal = "0.6"
 
-# Matter over Thread stack (git — not yet published to crates.io)
-# Pinned to "Update to esp-radio beta 1" (2a806b0): every later commit needs
-# unreleased rs-matter / rs-matter-stack from git, which would mean patching
-# those into the Lockstep Set too.
-# Unpin when: rs-matter-embassy HEAD builds against crates.io rs-matter,
-# i.e. its root Cargo.toml no longer patches rs-matter or rs-matter-stack.
-rs-matter-embassy = { git = "https://github.com/sysgrok/rs-matter-embassy", rev = "2a806b0b1b521293b34a773618499e87402c843c", features = [
-  "esp",
+# Matter over Thread stack (git: rs-matter-embassy is not on crates.io).
+# At d9456b8, upstream's HEAD and its first commit on crates.io rs-matter 0.5
+# and openthread 0.5. Its root Cargo.toml also patches esp-hal, esp-radio and
+# the embassy-net crates to git, for its Wi-Fi and Ethernet `embassy-net`
+# feature, which we leave off: our features build against the crates.io esp-*
+# above, and the embassy patch below is all the lockfile needs.
+# Unpin when: a rs-matter-embassy release is on crates.io.
+rs-matter-embassy = { git = "https://github.com/sysgrok/rs-matter-embassy", rev = "d9456b8f61e1c3c38c1538c776ff874590364b12", features = [
+  "esp-thread",
   "log",
-  "openthread",
   "openthread-heap-int-8192",
 ] }
+# The ESP32-C6 IEEE 802.15.4 radio driver under OpenThread. Listed only to pick
+# the chip, which rs-matter-embassy's `esp-thread` cannot do.
+openthread-driver-esp = { version = "0.1", features = ["esp32c6"] }
 # C stdlib polyfill for OpenThread's pre-compiled library (str*, utoa, etc.)
 tinyrlibc = { version = "0.5", default-features = false, features = ["memchr", "utoa", "strtoul"] }
 
@@ -82,20 +85,21 @@ embedded-test = { version = "0.7.3", features = ["embassy-010", "external-execut
 semihosting   = { version = "0.1", features = ["stdio"] }
 embassy-time  = "0.5"
 
-# Patch openthread + openthread-sys to git for commit 679dc18, the fix for a
-# refcount underflow in OpenThread::new_with_udp_srp, the constructor
-# rs-matter-embassy uses: without it, dropping the Thread stack (for example
-# for a Factory Reset) panics when overflow checks are on. crates.io
-# openthread 0.4.0 already has the internal-MbedTLS fix (ad3d8f3) this patch
-# was first added for, and accepts esp-radio 1.0.0-beta.1.
-# Pinned to ac97457, the last commit before CSL support (705c557) added a
-# RadioCaps argument to new_with_udp_srp: the rs-matter-embassy commit above
-# still calls the old signature, while its later commits call the new one.
-# Unpin when: the rs-matter-embassy pin above is lifted (move rev to HEAD).
-# Drop the patch when: an openthread release on crates.io contains 679dc18.
+# Only for resolving the lockfile, which takes in rs-matter-embassy's optional
+# dependencies too: its `embassy-net` feature (off here) names the `ipv4`
+# feature, which only embassy-net on embassy main has. That embassy-net brings
+# embassy main's embassy-time, whose embassy-time-driver may be in the lockfile
+# only once (`links`), so that one is patched too. Of the two, only
+# embassy-time-driver is built: it is crates.io 0.2.2 plus tick-rate constants.
+# Leave embassy-time, embassy-time-queue-utils and embassy-executor on
+# crates.io: patching queue-utils pulls in a second embassy-executor-timer-queue
+# (see SEAM_CRATES in scripts/lockstep-guard.sh), and embassy main's
+# embassy-embedded-hal needs nightly.
+# Drop the patch when: an embassy-net release on crates.io has the `ipv4`
+# feature.
 [patch.crates-io]
-openthread     = { git = "https://github.com/esp-rs/openthread", rev = "ac97457efc5debb4256bcd3013d4ddbe1ff804f4" }
-openthread-sys = { git = "https://github.com/esp-rs/openthread", rev = "ac97457efc5debb4256bcd3013d4ddbe1ff804f4" }
+embassy-net         = { git = "https://github.com/embassy-rs/embassy", rev = "153b9b2cb44f7bdc4ea3b3af85eb31b8950624f3" }
+embassy-time-driver = { git = "https://github.com/embassy-rs/embassy", rev = "153b9b2cb44f7bdc4ea3b3af85eb31b8950624f3" }
 
 # For fine tuning these settings, please refer to https://doc.rust-lang.org/cargo/reference/profiles.html
 [profile.dev]

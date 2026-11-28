@@ -7,8 +7,6 @@
 #![no_main]
 #![recursion_limit = "256"]
 
-use core::sync::atomic::{AtomicBool, Ordering};
-
 use embassy_executor::Spawner;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
@@ -18,14 +16,10 @@ use esp_hal::gpio::Level;
 use esp_hal::rmt::{PulseCode, Rmt, TxChannelConfig, TxChannelCreator as _};
 use esp_hal::time::Rate;
 use platform::{Platform, PlatformPeripherals};
-use rs_matter_embassy::matter::dm::clusters::app::on_off::{
-    self, EffectVariantEnum, OnOffHooks, StartUpOnOffEnum,
-};
+use rs_matter_embassy::matter::dm::clusters::app::on_off::{self, EffectVariantEnum, OnOffHooks};
 use rs_matter_embassy::matter::dm::clusters::desc::{self as desc, ClusterHandler as _};
 use rs_matter_embassy::matter::dm::devices::DEV_TYPE_ON_OFF_LIGHT;
 use rs_matter_embassy::matter::dm::{Async, Cluster, EmptyHandler, Endpoint, Node};
-use rs_matter_embassy::matter::error::Error;
-use rs_matter_embassy::matter::tlv::Nullable;
 use rs_matter_embassy::matter::{clusters, devices, with};
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -44,19 +38,11 @@ static LED_SIGNAL: Signal<CriticalSectionRawMutex, bool> = Signal::new();
 
 /// Matter On/Off cluster hooks backed by the WS2812 LED on GPIO8.
 ///
-/// - `on_off`: persists the current state across Matter interactions.
-/// - `set_on_off` signals `LED_SIGNAL` so the LED future can update the pixel.
-struct WS2812OnOffLogic {
-    on_off: AtomicBool,
-}
-
-impl WS2812OnOffLogic {
-    const fn new() -> Self {
-        Self {
-            on_off: AtomicBool::new(false),
-        }
-    }
-}
+/// The On/Off cluster handler owns the `OnOff` and `StartUpOnOff` attributes
+/// and stores them as Application State; at start-up it restores them and
+/// switches the LED through `set_on_off`, which signals `LED_SIGNAL` so the
+/// LED future can update the pixel.
+struct WS2812OnOffLogic;
 
 impl OnOffHooks for WS2812OnOffLogic {
     // The On/Off Light device type (Matter spec) requires the LIGHTING feature,
@@ -83,23 +69,8 @@ impl OnOffHooks for WS2812OnOffLogic {
                 | on_off::CommandId::OnWithTimedOff
         ));
 
-    fn on_off(&self) -> bool {
-        self.on_off.load(Ordering::Relaxed)
-    }
-
     fn set_on_off(&self, on: bool) {
-        self.on_off.store(on, Ordering::Relaxed);
         LED_SIGNAL.signal(on);
-    }
-
-    fn start_up_on_off(&self) -> Nullable<StartUpOnOffEnum> {
-        // No persistent startup preference — default to previous state (null).
-        Nullable::none()
-    }
-
-    fn set_start_up_on_off(&self, _value: Nullable<StartUpOnOffEnum>) -> Result<(), Error> {
-        // Application State is not persisted yet.
-        Ok(())
     }
 
     async fn handle_off_with_effect(&self, _effect: EffectVariantEnum) {
@@ -109,7 +80,7 @@ impl OnOffHooks for WS2812OnOffLogic {
 }
 
 /// Global WS2812 hooks instance (static so futures borrowing it are 'static).
-static WS2812: WS2812OnOffLogic = WS2812OnOffLogic::new();
+static WS2812: WS2812OnOffLogic = WS2812OnOffLogic;
 
 // ── WS2812 RMT encoding ──────────────────────────────────────────────────────
 
@@ -143,6 +114,10 @@ fn ws2812_encode(on: bool) -> [PulseCode; 25] {
 /// Endpoint 0 is always the hidden root; our light lives on endpoint 1.
 const LIGHT_ENDPOINT_ID: u16 = 1;
 
+/// The Application State key the light's On/Off cluster handler stores its
+/// attributes under.
+const LIGHT_ON_OFF_KEY: u16 = platform::APPLICATION_KEYS.start;
+
 /// The Matter Light node metadata, describing endpoints and clusters.
 const NODE: Node = Node {
     endpoints: &[
@@ -175,8 +150,12 @@ async fn main(_s: Spawner) {
     );
 
     // Create the On/Off cluster handler backed by the global WS2812 hooks.
-    let on_off_handler =
-        on_off::OnOffHandler::new_standalone(platform.dataver(), LIGHT_ENDPOINT_ID, &WS2812);
+    let on_off_handler = on_off::OnOffHandler::new_standalone(
+        platform.dataver(),
+        LIGHT_ENDPOINT_ID,
+        LIGHT_ON_OFF_KEY,
+        &WS2812,
+    );
 
     // Assemble the handler chain for the light's endpoint (the Platform adds
     // Endpoint 0).
@@ -185,7 +164,7 @@ async fn main(_s: Spawner) {
             |endpoint, cluster| {
                 endpoint == LIGHT_ENDPOINT_ID && cluster == WS2812OnOffLogic::CLUSTER.id
             },
-            on_off::HandlerAsyncAdaptor(&on_off_handler),
+            Async(on_off::HandlerAdaptor(&on_off_handler)),
         )
         .chain(
             |endpoint, cluster| {
