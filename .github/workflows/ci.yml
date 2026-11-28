@@ -28,6 +28,11 @@ jobs:
       - name: ADR version guard
         run: bash scripts/adr-version-guard.sh
 
+      # scripts/flash.sh must refuse to espflash an on-device test binary
+      # (a plain `cargo test`); needs no toolchain or Board.
+      - name: flash.sh guard
+        run: bash scripts/test-flash-guard.sh
+
       # Native tools for openthread-sys, in case it builds OpenThread from
       # source instead of using its prebuilt library.
       - name: Install native build dependencies

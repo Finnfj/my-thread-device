@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "ask": [
+      "Bash(espflash flash *)",
+      "Bash(espflash write-bin *)",
+      "Bash(espflash erase-flash *)",
+      "Bash(espflash erase-parts *)",
+      "Bash(espflash erase-region *)",
+      "Bash(probe-rs run *)",
+      "Bash(probe-rs download *)",
+      "Bash(probe-rs erase *)",
+      "Bash(bash scripts/flash.sh *)",
+      "Bash(cargo run *)",
+      "Bash(cargo run)",
+      "Bash(cargo xtask hil *)",
+      "Bash(cargo xtask hil)"
+    ]
+  }
+}

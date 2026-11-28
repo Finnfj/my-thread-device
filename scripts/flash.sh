@@ -12,12 +12,11 @@
 # run), so a log stays readable after the terminal has scrolled past it.
 # espflash runs with --non-interactive because its output goes through a pipe;
 # Ctrl+C still stops it. ESPFLASH_PORT picks the port when several are present.
+#
+# FLASH_DRY_RUN=1 prints the espflash command instead of running it and writes
+# no log, so the script can be tested without a Board
+# (scripts/test-flash-guard.sh).
 set -euo pipefail
-
-root="$(cd "$(dirname "$0")/.." && pwd)"
-log_dir="$root/target/serial"
-mkdir -p "$log_dir"
-log="$log_dir/$(date -u +%Y-%m-%dT%H-%M-%SZ).log"
 
 if [ "${1:-}" = "--attach" ]; then
   shift
@@ -35,6 +34,17 @@ else
   esac
   cmd=(espflash flash --monitor --non-interactive --chip esp32c6 "$@")
 fi
+
+if [ "${FLASH_DRY_RUN:-}" = 1 ]; then
+  printf '%s
+' "${cmd[*]}"
+  exit 0
+fi
+
+root="$(cd "$(dirname "$0")/.." && pwd)"
+log_dir="$root/target/serial"
+mkdir -p "$log_dir"
+log="$log_dir/$(date -u +%Y-%m-%dT%H-%M-%SZ).log"
 
 echo "Serial log: $log" >&2
 "${cmd[@]}" 2>&1 | tee >(sed -u 's/\x1b\[[0-9;]*m//g' > "$log")
