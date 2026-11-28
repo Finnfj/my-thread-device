@@ -30,6 +30,13 @@ use rs_matter_embassy::matter::{clusters, devices, with};
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
+/// This Firmware's Firmware ID, stored with its Persisted State.
+///
+/// Never change it: a Device that boots into Persisted State stamped with
+/// another Firmware ID Factory Resets (ADR 0009), so every On/Off Light
+/// would lose its Commissioning and Application State on the update.
+const FIRMWARE_ID: &str = "on-off-light";
+
 // ── WS2812 On/Off hooks ──────────────────────────────────────────────────────
 
 /// Notifies the LED driver future whenever the on/off state changes.
@@ -154,15 +161,18 @@ const NODE: Node = Node {
 async fn main(_s: Spawner) {
     let peripherals = platform::init();
 
-    let mut platform = Platform::start(PlatformPeripherals {
-        rng: peripherals.RNG,
-        adc1: peripherals.ADC1,
-        timg0: peripherals.TIMG0,
-        from_cpu_intr0: peripherals.FROM_CPU_INTR0,
-        ieee802154: peripherals.IEEE802154,
-        bt: peripherals.BT,
-        flash: peripherals.FLASH,
-    });
+    let mut platform = Platform::start(
+        FIRMWARE_ID,
+        PlatformPeripherals {
+            rng: peripherals.RNG,
+            adc1: peripherals.ADC1,
+            timg0: peripherals.TIMG0,
+            from_cpu_intr0: peripherals.FROM_CPU_INTR0,
+            ieee802154: peripherals.IEEE802154,
+            bt: peripherals.BT,
+            flash: peripherals.FLASH,
+        },
+    );
 
     // Create the On/Off cluster handler backed by the global WS2812 hooks.
     let on_off_handler =

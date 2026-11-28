@@ -8,7 +8,7 @@
 //! #[esp_rtos::main]
 //! async fn main(_s: Spawner) {
 //!     let p = platform::init();
-//!     let mut platform = Platform::start(PlatformPeripherals { /* radio, RNG, timers, flash */ });
+//!     let mut platform = Platform::start(FIRMWARE_ID, PlatformPeripherals { /* radio, RNG, timers, flash */ });
 //!     // ... set up the Firmware's own hardware from the remaining peripherals ...
 //!     // The Firmware's own endpoints only; the Platform serves Endpoint 0.
 //!     let handler = /* rs-matter handler chain, using platform.dataver() */;
@@ -18,8 +18,11 @@
 //!
 //! Commissioning State and Network State persist in the `matter-kv` flash
 //! partition (see [`persist`]), so a commissioned Device comes back after a
-//! power cycle without Commissioning again. Application State, Device
-//! Identity and Power Mode move in here in later steps. For now the stack
+//! power cycle without Commissioning again. That state is stamped with the
+//! Firmware ID and a format version; a Device that boots into another
+//! Firmware's state, or another format, Factory Resets (ADR 0009).
+//! Application State, Device Identity and Power Mode move in here in later
+//! steps. For now the stack
 //! runs with a random Discriminator and EUI-64 on every boot and the shared
 //! test Setup Passcode; the per-Device Setup Passcode required by ADR 0003
 //! arrives with Device Identity (ADR 0007).
@@ -148,8 +151,19 @@ pub struct Platform {
 }
 
 impl Platform {
-    /// Start the scheduler and set up the Matter stack.
-    pub fn start(p: PlatformPeripherals) -> Self {
+    /// Start the scheduler and set up the Matter stack for the Firmware
+    /// `firmware_id`.
+    ///
+    /// Each Firmware declares its Firmware ID as a constant and never changes
+    /// it: if Persisted State was written by another Firmware ID (or in
+    /// another format), this Factory Resets the Device before the Matter
+    /// stack loads anything (ADR 0009).
+    ///
+    /// # Panics
+    ///
+    /// If `firmware_id` is empty or longer than 32 bytes, or as described
+    /// on `persist::open`.
+    pub fn start(firmware_id: &'static str, p: PlatformPeripherals) -> Self {
         // TRNG source — must be created before calling Trng::try_new().
         let trng_source = TrngSource::new(p.rng, p.adc1);
         let mut trng = Trng::try_new().unwrap();
@@ -183,7 +197,7 @@ impl Platform {
             ieee802154: p.ieee802154,
             bt: p.bt,
             stack,
-            store: persist::open(p.flash),
+            store: persist::open(p.flash, firmware_id),
             ieee_eui64,
         }
     }

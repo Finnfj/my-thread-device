@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members  = ["platform", "firmware/on-off-light"]
+members  = ["platform", "persist-stamp", "firmware/on-off-light"]
 # The host-side dev tool: its own workspace, so that `--workspace` builds for
 # the ESP32-C6 never try to compile it (`cargo xtask`, see .cargo/config.toml).
 exclude  = ["xtask"]
@@ -14,7 +14,8 @@ version      = "0.1.0"
 license      = "MIT OR Apache-2.0"
 
 [workspace.dependencies]
-platform = { path = "platform" }
+platform      = { path = "platform" }
+persist-stamp = { path = "persist-stamp" }
 
 # ESP-HAL — log-04 instead of defmt
 esp-hal = { version = "~1.2.0", features = ["log-04", "esp32c6", "unstable"] }
@@ -40,6 +41,9 @@ esp-radio              = { version = "1.0.0-beta.1", features = ["ble", "log-04"
 # Flash access for Persisted State; `embedded-storage` gives FlashStorage the
 # NorFlash traits that sequential-storage (under SeqMapKvBlobStore) needs.
 esp-storage             = { version = "0.10", features = ["embedded-storage", "esp32c6"] }
+# The NorFlash traits themselves: the Platform forwards them through a borrowed
+# FlashStorage to read the stamp before it decides on a Factory Reset.
+embedded-storage        = "0.3"
 # Provides the memory_range! macro for reclaimed-RAM calculation
 esp-metadata-generated  = "0.5"
 

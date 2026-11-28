@@ -77,6 +77,8 @@ Green clippy doesn't prove the Device works. In the first run, rs-matter-stack s
 
 Port every behavioural change into `platform/` or `firmware/`, and note each one for the PR.
 
+Check whether rs-matter or rs-matter-embassy changed what they persist: their key layout (rs-matter's `persist.rs`) or the format of a stored blob. If so, bump `FORMAT_VERSION` in `platform/src/persist.rs`, so that every Device Factory Resets on the update instead of misreading its old state (ADR 0009), and say so at the top of the PR: the user has to commission every Device again.
+
 Then run `bash scripts/adr-version-guard.sh`. For each claim it lists, check the claim in the new version's source. If it still holds, update the marker; if not, amend the ADR (and its line in `docs/architecture.md`). In the first run, ADR-0005's "rs-matter has no ICD Management cluster" went stale unnoticed.
 
 Done when: every hunk of the example diff is either mirrored here or noted as not applying, and the ADR version guard passes.

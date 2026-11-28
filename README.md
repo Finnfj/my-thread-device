@@ -131,7 +131,14 @@ Run either from the repository root: espflash picks up `espflash.toml` there,
 which makes it flash the repo's own partition table (`partitions.csv`, ADR
 0008). Flashing only writes the bootloader, the partition table and the app,
 so the `matter-kv` partition, and with it a commissioned Device's fabrics and
-Thread dataset, survives a reflash.
+Thread dataset, survives a reflash of the same Firmware.
+
+Persisted State is stamped with the Firmware ID (`FIRMWARE_ID` in the
+Firmware's `main.rs`) and the Platform's Persisted State format version
+(`FORMAT_VERSION` in [platform/src/persist.rs](platform/src/persist.rs)). If
+either differs at boot, because another Firmware was flashed onto the Board or
+an update bumped the format, the Device Factory Resets and has to be
+commissioned again (ADR 0009). The serial log says so.
 
 Erase `matter-kv` once on a Board that was last flashed without this
 partition table, because the old app image sat where `matter-kv` is now. The
@@ -248,8 +255,10 @@ them, because its runner is espflash, which has no opt-in check.
 
 ### Afterwards
 
-The Board is left with the test binary and an empty `matter-kv`. Flash the
-Firmware again with `cargo run` and commission it. If the Board is also your
+The Board is left with the test binary and the tests' Persisted State in
+`matter-kv`, stamped with the tests' own Firmware ID. Flash the Firmware again
+with `cargo run`: at its first boot it finds that stamp and Factory Resets.
+Then commission it. If the Board is also your
 Device, remove its line from `test-boards.txt` once you are done, so that a
 later `cargo xtask hil` can't wipe it while it is commissioned.
 
@@ -267,6 +276,7 @@ later `cargo xtask hil` can't wipe it while it is commissioned.
 │       ├── lib.rs
 │       ├── persist.rs     # Persisted State in the matter-kv flash partition
 │       └── test_support.rs # Set-up shared by the on-device tests
+├── persist-stamp/         # Firmware ID + format version check (host-tested)
 ├── firmware/
 │   └── on-off-light/      # Firmware: On/Off Light on a WS2812B LED
 │       ├── build.rs       # Linker script wiring
